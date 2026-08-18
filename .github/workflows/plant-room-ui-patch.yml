@@ -1,4 +1,4 @@
-name: Plant Room v2.6 desktop photo fit
+name: Plant Room v2.7 permanent photo delete
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Patch v2.6 desktop photo fit
+      - name: Patch v2.7 permanent bundled-photo delete
         shell: python
         run: |
           import re
@@ -24,38 +24,37 @@ jobs:
 
           page=Path('index.html')
           text=page.read_text(encoding='utf-8')
-          old_marker='Cloud build v2.5: top-layer album viewer'
-          new_marker='Cloud build v2.6: top-layer viewer + desktop fit'
-          v25='<script src="v25-photo-viewer.js?v=2.5.1"></script>'
+          old_marker='Cloud build v2.6: top-layer viewer + desktop fit'
+          new_marker='Cloud build v2.7: permanent bundled-photo delete'
           v26='<script src="v26-photo-fit.js?v=2.6.0"></script>'
+          v27='<script src="v27-permanent-delete.js?v=2.7.0"></script>'
           changed=False
 
           if new_marker not in text:
-              if old_marker in text:
-                  text=text.replace(old_marker,new_marker,1)
-                  changed=True
-              elif 'Cloud build v2.5:' not in text:
-                  raise SystemExit('Expected v2.5 build marker not found')
+              if old_marker not in text:
+                  raise SystemExit('Expected v2.6 build marker not found')
+              text=text.replace(old_marker,new_marker,1)
+              changed=True
 
-          if v26 not in text:
-              if v25 in text:
-                  text=text.replace(v25,v25+'\n  '+v26,1)
+          if v27 not in text:
+              if v26 in text:
+                  text=text.replace(v26,v26+'\n  '+v27,1)
               elif '</body>' in text:
-                  text=text.replace('</body>','  '+v26+'\n</body>',1)
+                  text=text.replace('</body>','  '+v27+'\n</body>',1)
               else:
                   raise SystemExit('Closing body tag not found')
               changed=True
 
-          required=['id="mainPhoto"','function bindPlantPhotoViewer(p)','v25-photo-viewer.js','v26-photo-fit.js']
+          required=['function galleryHTML(p)','v25-photo-viewer.js','v26-photo-fit.js','v27-permanent-delete.js']
           missing=[x for x in required if x not in text]
           if missing:
-              raise SystemExit('Missing viewer markers: '+', '.join(missing))
+              raise SystemExit('Missing gallery markers: '+', '.join(missing))
 
           if changed:
               page.write_text(text,encoding='utf-8')
-              print('v2.6 desktop fit hook installed')
+              print('v2.7 permanent delete hook installed')
           else:
-              print('v2.6 already installed')
+              print('v2.7 already installed')
 
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,flags=re.S)
           if scripts:
@@ -65,6 +64,7 @@ jobs:
         run: |
           node --check v25-photo-viewer.js
           node --check v26-photo-fit.js
+          node --check v27-permanent-delete.js
           if [ -s /tmp/plant-inline-app.js ]; then node --check /tmp/plant-inline-app.js; fi
 
       - name: Commit updated site
@@ -75,6 +75,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Fit fullscreen photos to desktop viewport"
+            git commit -m "Add permanent delete for removed bundled photos"
             git push
           fi
