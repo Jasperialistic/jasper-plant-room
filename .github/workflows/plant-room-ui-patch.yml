@@ -1,4 +1,4 @@
-name: Plant Room UI patch
+name: Plant Room v2.2 patch
 
 on:
   push:
@@ -16,75 +16,25 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Patch thumbnail controls and tab switching
+      - name: Apply v2.2 site patch
         shell: python
         run: |
+          import base64, subprocess, zlib
           from pathlib import Path
 
-          p = Path('index.html')
-          text = p.read_text(encoding='utf-8')
-          changed = False
-
-          def replace_once(old, new, label):
-              global text, changed
-              if new in text:
-                  print(f'{label}: already applied')
-                  return
-              if old not in text:
-                  raise SystemExit(f'{label}: expected source text not found')
-              text = text.replace(old, new, 1)
-              changed = True
-              print(f'{label}: patched')
-
-          # Fix owner-mode tab visibility. Previously .admin-only forced the Care Log
-          # section visible even when Locations or To profile was selected.
-          replace_once(
-              ".admin-only{display:none!important}body.owner-mode .admin-only{display:revert!important}body.owner-mode #careLogTab{display:block!important}body.owner-mode #statusFilter{display:block!important}",
-              ".admin-only{display:none!important}body.owner-mode .admin-only:not(.view){display:revert!important}body.owner-mode .view.admin-only{display:none!important}body.owner-mode .view.admin-only.active{display:block!important}body.owner-mode #careLogTab{display:block!important}body.owner-mode #statusFilter{display:block!important}",
-              'owner tab visibility'
-          )
-
-          # Add thumbnail selector styling while keeping delete at top-right.
-          old_gallery_css = ".gallery-tile button{position:absolute;top:7px;right:7px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.58);color:#fff;cursor:pointer}"
-          new_gallery_css = old_gallery_css + ".gallery-tile button.set-thumb{left:7px;right:auto;width:auto;min-width:28px;padding:0 9px;border-radius:999px;font-size:.7rem;font-weight:800;background:rgba(0,0,0,.68)}.gallery-tile button.set-thumb.active{background:#d5be85;color:#152017}.gallery-tile button.delete-photo{left:auto;right:7px}"
-          replace_once(old_gallery_css, new_gallery_css, 'thumbnail button styling')
-
-          # Add Set thumbnail / Use original thumbnail controls to Gallery.
-          old_gallery = '''function galleryHTML(p){const arr=galleryPhotos(p);return `${isOwner?'<div class="panel-actions"><button class="ghost small" data-add-photo="gallery">+ Add gallery photo</button></div>':''}<div class="gallery-grid">${arr.map((x,i)=>`<div class="gallery-tile"><img src="${x.url}" alt="${esc(p.name)}">${isOwner&&!x.base?`<button title="Delete" data-delete-photo="${x.id}">×</button>`:''}<div class="photo-meta">${x.base?(i===0?'Current thumbnail · ':'Collection · '):''}${x.photo_date?fmt(x.photo_date):'Gallery'}</div></div>`).join('')}</div>`;}'''
-          new_gallery = '''function galleryHTML(p){const arr=galleryPhotos(p),hasCloudThumb=cloudPhotos(p,'gallery').some(x=>x.is_thumbnail);return `${isOwner?'<div class="panel-actions"><button class="ghost small" data-add-photo="gallery">+ Add gallery photo</button></div>':''}<div class="gallery-grid">${arr.map((x,i)=>{const current=x.base?(!hasCloudThumb&&i===0):!!x.is_thumbnail;const thumbBtn=isOwner?(x.base&&i===0?(hasCloudThumb?`<button class="set-thumb" title="Use original thumbnail" data-reset-thumbnail="${p.cloudId}">☆ Use thumbnail</button>`:`<button class="set-thumb active" title="Current thumbnail" disabled>★ Thumbnail</button>`):(!x.base?`<button class="set-thumb ${current?'active':''}" title="${current?'Current thumbnail':'Set as thumbnail'}" data-set-thumbnail="${x.id}">${current?'★ Thumbnail':'☆ Set thumbnail'}</button>`:'')):'';return`<div class="gallery-tile"><img src="${x.url}" alt="${esc(p.name)}">${thumbBtn}${isOwner&&!x.base?`<button class="delete-photo" title="Delete" data-delete-photo="${x.id}">×</button>`:''}<div class="photo-meta">${current?'Current thumbnail · ':x.base?'Collection · ':''}${x.photo_date?fmt(x.photo_date):'Gallery'}</div></div>`}).join('')}</div>`;}'''
-          replace_once(old_gallery, new_gallery, 'gallery thumbnail controls')
-
-          # Wire thumbnail controls in plant dialog.
-          old_bind = ''' if(isOwner){$$('[data-add-photo]').forEach(b=>b.onclick=()=>openPhotoDialog(p,b.dataset.addPhoto));$$('[data-delete-photo]').forEach(b=>b.onclick=()=>deletePhoto(b.dataset.deletePhoto,p.cloudId,activeTab));$$('[data-quick]').forEach(b=>b.onclick=()=>quickAction(p,b.dataset.quick));const eb=$('#editPlantBtn');if(eb)eb.onclick=()=>openEditDialog(p);}'''
-          new_bind = ''' if(isOwner){$$('[data-add-photo]').forEach(b=>b.onclick=()=>openPhotoDialog(p,b.dataset.addPhoto));$$('[data-delete-photo]').forEach(b=>b.onclick=()=>deletePhoto(b.dataset.deletePhoto,p.cloudId,activeTab));$$('[data-set-thumbnail]').forEach(b=>b.onclick=()=>setThumbnail(b.dataset.setThumbnail,p.cloudId));$$('[data-reset-thumbnail]').forEach(b=>b.onclick=()=>resetThumbnail(p.cloudId));$$('[data-quick]').forEach(b=>b.onclick=()=>quickAction(p,b.dataset.quick));const eb=$('#editPlantBtn');if(eb)eb.onclick=()=>openEditDialog(p);}'''
-          replace_once(old_bind, new_bind, 'thumbnail event handlers')
-
-          # Add cloud writes: clear previous gallery thumbnail then set selected one.
-          anchor = 'async function deletePhoto(id,plantId,tab){'
-          functions = '''async function setThumbnail(id,plantId){if(!requireOwner())return;setCloudStatus('Saving thumbnail…');const clear=await sb.from('plant_photos').update({is_thumbnail:false}).eq('plant_id',plantId).eq('kind','gallery');if(clear.error){alert(clear.error.message);setCloudStatus('Sync error',true);return;}const set=await sb.from('plant_photos').update({is_thumbnail:true}).eq('id',id).eq('plant_id',plantId).eq('kind','gallery');if(set.error){alert(set.error.message);setCloudStatus('Sync error',true);return;}await loadCloud();openPlant(plantId,'gallery');}\nasync function resetThumbnail(plantId){if(!requireOwner())return;setCloudStatus('Saving thumbnail…');const clear=await sb.from('plant_photos').update({is_thumbnail:false}).eq('plant_id',plantId).eq('kind','gallery');if(clear.error){alert(clear.error.message);setCloudStatus('Sync error',true);return;}await loadCloud();openPlant(plantId,'gallery');}\n'''
-          if 'async function setThumbnail(id,plantId)' in text:
-              print('thumbnail cloud functions: already applied')
-          elif anchor in text:
-              text = text.replace(anchor, functions + anchor, 1)
-              changed = True
-              print('thumbnail cloud functions: patched')
+          page = Path('index.html')
+          text = page.read_text(encoding='utf-8')
+          marker = 'Cloud build v2.2: full gallery manager + interactive grow zones'
+          if marker in text:
+              print('v2.2 already applied')
           else:
-              raise SystemExit('thumbnail cloud functions: anchor not found')
-
-          # Make top-level tab switching explicit and defensive.
-          old_tabs = '''$$('.tab').forEach(b=>b.onclick=()=>{if(b.classList.contains('admin-only')&&!isOwner)return;$$('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');$$('.view').forEach(v=>v.classList.remove('active'));$('#'+b.dataset.view+'View').classList.add('active');});'''
-          new_tabs = '''$$('.tab').forEach(b=>b.onclick=()=>{if(b.classList.contains('admin-only')&&!isOwner)return;const target=$('#'+b.dataset.view+'View');if(!target)return;$$('.tab').forEach(x=>x.classList.remove('active'));$$('.view').forEach(v=>v.classList.remove('active'));b.classList.add('active');target.classList.add('active');});'''
-          replace_once(old_tabs, new_tabs, 'tab switching')
-
-          marker = '<!-- Cloud build v2.1: thumbnail selector + tab fix -->'
-          if marker not in text:
-              text = text.replace("<title>Jasper's Plant Room</title>", "<title>Jasper's Plant Room</title>\n  " + marker, 1)
-              changed = True
-
-          if changed:
-              p.write_text(text, encoding='utf-8')
-          else:
-              print('No changes needed.')
+              encoded = Path('.github/patches/v22.patch.zlib.b64').read_text(encoding='utf-8').strip()
+              patch = zlib.decompress(base64.b64decode(encoded))
+              patch_path = Path('/tmp/v22.patch')
+              patch_path.write_bytes(patch)
+              subprocess.run(['git','apply','--check',str(patch_path)], check=True)
+              subprocess.run(['git','apply',str(patch_path)], check=True)
+              print('v2.2 patch applied')
 
       - name: Commit patched site
         run: |
@@ -94,6 +44,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Add thumbnail selector and fix section tabs"
+            git commit -m "Add gallery manager and interactive grow zones"
             git push
           fi
