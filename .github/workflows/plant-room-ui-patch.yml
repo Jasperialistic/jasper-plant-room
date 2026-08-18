@@ -1,4 +1,4 @@
-name: Plant Room v2.3 patch
+name: Plant Room v2.4 patch
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Apply v2.3 Add Plant patch
+      - name: Apply v2.4 photo viewer patch
         shell: python
         run: |
           import base64, subprocess, zlib, re
@@ -24,28 +24,28 @@ jobs:
 
           page = Path('index.html')
           text = page.read_text(encoding='utf-8')
-          marker = 'Cloud build v2.3: owner Add Plant + cloud-first collection'
+          marker = 'Cloud build v2.4: album-style photo viewer'
           if marker in text:
-              print('v2.3 already applied')
+              print('v2.4 already applied')
           else:
-              encoded = Path('.github/patches/v23.patch.zlib.b64').read_text(encoding='utf-8').strip()
+              encoded = Path('.github/patches/v24.patch.zlib.b64').read_text(encoding='utf-8').strip()
               patch = zlib.decompress(base64.b64decode(encoded))
-              patch_path = Path('/tmp/v23.patch')
+              patch_path = Path('/tmp/v24.patch')
               patch_path.write_bytes(patch)
               subprocess.run(['git','apply','--check',str(patch_path)], check=True)
               subprocess.run(['git','apply',str(patch_path)], check=True)
               text = page.read_text(encoding='utf-8')
-              required = ['id="addPlantTab"','id="addPlantForm"','async function createNewPlant(e)','async function uploadNewPlantPhotos']
+              required = ['id="mainPhoto"','data-gallery-preview','function bindPlantPhotoViewer(p)','id=\'photoLightbox\'','function openPhotoLightbox(p,key)']
               missing = [x for x in required if x not in text]
               if missing:
-                  raise SystemExit('Missing v2.3 markers: ' + ', '.join(missing))
+                  raise SystemExit('Missing v2.4 markers: ' + ', '.join(missing))
               scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S)
-              Path('/tmp/plant-v23-app.js').write_text(scripts[-1], encoding='utf-8')
-              print('v2.3 patch applied')
+              Path('/tmp/plant-v24-app.js').write_text(scripts[-1], encoding='utf-8')
+              print('v2.4 patch applied')
 
       - name: Check JavaScript syntax
         run: |
-          if [ -f /tmp/plant-v23-app.js ]; then node --check /tmp/plant-v23-app.js; fi
+          if [ -f /tmp/plant-v24-app.js ]; then node --check /tmp/plant-v24-app.js; fi
 
       - name: Commit patched site
         run: |
@@ -55,6 +55,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Add owner Add Plant tab"
+            git commit -m "Add album-style photo viewer"
             git push
           fi
