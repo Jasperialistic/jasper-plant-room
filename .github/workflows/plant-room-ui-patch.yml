@@ -1,4 +1,4 @@
-name: Plant Room v2.2 patch
+name: Plant Room v2.3 patch
 
 on:
   push:
@@ -16,25 +16,36 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Apply v2.2 site patch
+      - name: Apply v2.3 Add Plant patch
         shell: python
         run: |
-          import base64, subprocess, zlib
+          import base64, subprocess, zlib, re
           from pathlib import Path
 
           page = Path('index.html')
           text = page.read_text(encoding='utf-8')
-          marker = 'Cloud build v2.2: full gallery manager + interactive grow zones'
+          marker = 'Cloud build v2.3: owner Add Plant + cloud-first collection'
           if marker in text:
-              print('v2.2 already applied')
+              print('v2.3 already applied')
           else:
-              encoded = Path('.github/patches/v22.patch.zlib.b64').read_text(encoding='utf-8').strip()
+              encoded = Path('.github/patches/v23.patch.zlib.b64').read_text(encoding='utf-8').strip()
               patch = zlib.decompress(base64.b64decode(encoded))
-              patch_path = Path('/tmp/v22.patch')
+              patch_path = Path('/tmp/v23.patch')
               patch_path.write_bytes(patch)
               subprocess.run(['git','apply','--check',str(patch_path)], check=True)
               subprocess.run(['git','apply',str(patch_path)], check=True)
-              print('v2.2 patch applied')
+              text = page.read_text(encoding='utf-8')
+              required = ['id="addPlantTab"','id="addPlantForm"','async function createNewPlant(e)','async function uploadNewPlantPhotos']
+              missing = [x for x in required if x not in text]
+              if missing:
+                  raise SystemExit('Missing v2.3 markers: ' + ', '.join(missing))
+              scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S)
+              Path('/tmp/plant-v23-app.js').write_text(scripts[-1], encoding='utf-8')
+              print('v2.3 patch applied')
+
+      - name: Check JavaScript syntax
+        run: |
+          if [ -f /tmp/plant-v23-app.js ]; then node --check /tmp/plant-v23-app.js; fi
 
       - name: Commit patched site
         run: |
@@ -44,6 +55,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Add gallery manager and interactive grow zones"
+            git commit -m "Add owner Add Plant tab"
             git push
           fi
