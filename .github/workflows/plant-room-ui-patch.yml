@@ -1,4 +1,4 @@
-name: Plant Room v2.4 patch
+name: Plant Room v2.5 photo viewer fix
 
 on:
   push:
@@ -16,38 +16,52 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Apply v2.4 photo viewer patch
+      - name: Patch v2.5 top-layer photo viewer
         shell: python
         run: |
-          import base64, subprocess, zlib, re
+          import re
           from pathlib import Path
 
-          page = Path('index.html')
-          text = page.read_text(encoding='utf-8')
-          marker = 'Cloud build v2.4: album-style photo viewer'
-          if marker in text:
-              print('v2.4 already applied')
+          page=Path('index.html')
+          text=page.read_text(encoding='utf-8')
+          old_marker='Cloud build v2.4: album-style photo viewer'
+          new_marker='Cloud build v2.5: top-layer album viewer'
+          script_tag='<script src="v25-photo-viewer.js?v=2.5.1"></script>'
+          changed=False
+
+          if new_marker not in text:
+              if old_marker not in text:
+                  raise SystemExit('Expected v2.4 build marker not found')
+              text=text.replace(old_marker,new_marker,1)
+              changed=True
+
+          if script_tag not in text:
+              if '</body>' not in text:
+                  raise SystemExit('Closing body tag not found')
+              text=text.replace('</body>',f'  {script_tag}\n</body>',1)
+              changed=True
+
+          required=['id="mainPhoto"','function bindPlantPhotoViewer(p)','function openPhotoLightbox(p,key)']
+          missing=[x for x in required if x not in text]
+          if missing:
+              raise SystemExit('Missing existing gallery viewer markers: '+', '.join(missing))
+
+          if changed:
+              page.write_text(text,encoding='utf-8')
+              print('v2.5 top-layer viewer hook installed')
           else:
-              encoded = Path('.github/patches/v24.patch.zlib.b64').read_text(encoding='utf-8').strip()
-              patch = zlib.decompress(base64.b64decode(encoded))
-              patch_path = Path('/tmp/v24.patch')
-              patch_path.write_bytes(patch)
-              subprocess.run(['git','apply','--check',str(patch_path)], check=True)
-              subprocess.run(['git','apply',str(patch_path)], check=True)
-              text = page.read_text(encoding='utf-8')
-              required = ['id="mainPhoto"','data-gallery-preview','function bindPlantPhotoViewer(p)','id=\'photoLightbox\'','function openPhotoLightbox(p,key)']
-              missing = [x for x in required if x not in text]
-              if missing:
-                  raise SystemExit('Missing v2.4 markers: ' + ', '.join(missing))
-              scripts = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', text, flags=re.S)
-              Path('/tmp/plant-v24-app.js').write_text(scripts[-1], encoding='utf-8')
-              print('v2.4 patch applied')
+              print('v2.5 already installed')
+
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,flags=re.S)
+          if scripts:
+              Path('/tmp/plant-inline-app.js').write_text(scripts[-1],encoding='utf-8')
 
       - name: Check JavaScript syntax
         run: |
-          if [ -f /tmp/plant-v24-app.js ]; then node --check /tmp/plant-v24-app.js; fi
+          node --check v25-photo-viewer.js
+          if [ -s /tmp/plant-inline-app.js ]; then node --check /tmp/plant-inline-app.js; fi
 
-      - name: Commit patched site
+      - name: Commit fixed site
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,6 +69,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Add album-style photo viewer"
+            git commit -m "Fix fullscreen album viewer top layer"
             git push
           fi
