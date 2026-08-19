@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.5.1 — growing zone -> measured PPFD light link with star brightness */
+/* Jasper's Plant Room v4.5.2 — growing zone -> measured PPFD light link with compact star brightness */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -69,14 +69,14 @@
 
   function starsFor(phrase){
     const range=numericRange(phrase);
-    if(!range)return '★★★☆☆';
+    if(!range)return '★★★';
     const average=(range.min+range.max)/2;
     let level=1;
     if(average>=200)level=5;
     else if(average>=160)level=4;
     else if(average>=120)level=3;
     else if(average>=80)level=2;
-    return '★'.repeat(level)+'☆'.repeat(5-level);
+    return '★'.repeat(level);
   }
 
   function zoneLightText(name){
