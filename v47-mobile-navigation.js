@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.11.0 — sticky tabbed plant profiles */
+/* Jasper's Plant Room v4.12.1 — native image hold + sticky tabbed profiles */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -714,6 +714,13 @@
   #photoLightbox.v410-zoomed .photo-lightbox-stage,#growthPhotoViewer.v410-zoomed .growth-view-stage{touch-action:none;cursor:grab}
   #photoLightbox.v410-zoomed .photo-lightbox-img,#growthPhotoViewer.v410-zoomed .growth-view-img{cursor:grab}
   #photoLightbox.v410-zoom-panning .photo-lightbox-img,#growthPhotoViewer.v410-zoom-panning .growth-view-img{cursor:grabbing}
+  #photoLightbox,#growthPhotoViewer,#photoLightbox button,#growthPhotoViewer button,#photoLightbox .photo-lightbox-top,#photoLightbox .photo-lightbox-bottom,#growthPhotoViewer .growth-view-top,#growthPhotoViewer .growth-view-bottom{
+    -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important
+  }
+  #photoLightboxImg,#growthViewImg{
+    -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:default!important;-webkit-user-drag:auto!important
+  }
+  #photoLightboxShare,#growthViewShare,#photoLightbox .photo-lightbox-actions{display:none!important}
 }
 `;
   const style=document.createElement('style');

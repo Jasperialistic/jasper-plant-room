@@ -37,7 +37,7 @@
 .growth-view-menu button:hover{background:rgba(255,255,255,.07)}
 .growth-view-menu button.danger{color:#efabab}
 .growth-view-stage{position:relative;width:100%;height:100%;min-width:0;min-height:0;display:grid;place-items:center;overflow:hidden;touch-action:pan-y;overscroll-behavior:contain}
-.growth-view-img{display:block;width:auto;height:auto;max-width:min(84vw,1180px);max-height:min(77dvh,830px);object-fit:contain;border-radius:7px;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+.growth-view-img{display:block;width:auto;height:auto;max-width:min(84vw,1180px);max-height:min(77dvh,830px);object-fit:contain;border-radius:7px;user-select:none;-webkit-user-select:none;-webkit-user-drag:auto;-webkit-touch-callout:default}
 .growth-view-nav{position:absolute;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:52px;height:70px;border:1px solid rgba(255,255,255,.12);border-radius:15px;background:rgba(0,0,0,.5);color:#fff;font-size:34px;cursor:pointer;z-index:5}
 .growth-view-nav:hover{background:rgba(255,255,255,.14)}
 .growth-view-prev{left:18px}.growth-view-next{right:18px}

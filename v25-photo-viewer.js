@@ -15,7 +15,7 @@
 #photoLightbox .photo-lightbox-title span{display:block;color:#aebbb6;font-size:12px;margin-top:3px}
 #photoLightbox .photo-lightbox-close{display:grid;place-items:center;flex:0 0 auto;border:0;background:rgba(255,255,255,.13);color:#fff;width:44px;height:44px;border-radius:50%;font-size:27px;line-height:1;cursor:pointer}
 #photoLightbox .photo-lightbox-stage{position:relative;width:100%;height:100%;min-width:0;min-height:0;display:grid;place-items:center;overflow:hidden;touch-action:pan-y;overscroll-behavior:contain;background:#030706}
-#photoLightbox .photo-lightbox-img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+#photoLightbox .photo-lightbox-img{display:block;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;user-select:none;-webkit-user-select:none;-webkit-user-drag:auto;-webkit-touch-callout:default}
 #photoLightbox .photo-lightbox-nav{position:absolute;z-index:7;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:54px;height:72px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(0,0,0,.52);color:#fff;font-size:36px;line-height:1;cursor:pointer;box-shadow:0 8px 25px rgba(0,0,0,.28)}
 #photoLightbox .photo-lightbox-nav:hover{background:rgba(255,255,255,.16)}
 #photoLightbox .photo-lightbox-prev{left:14px}
