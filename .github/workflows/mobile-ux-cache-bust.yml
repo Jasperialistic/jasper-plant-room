@@ -5,6 +5,7 @@ on:
     paths:
       - 'v25-photo-viewer.js'
       - 'v36-mobile-gallery.js'
+      - 'v37-mobile-plant-screen.js'
       - '.github/workflows/mobile-ux-cache-bust.yml'
 
 permissions:
@@ -44,6 +45,16 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v36-mobile-gallery.js after mobile viewer')
 
+          plant_tag = '<script src="v37-mobile-plant-screen.js?v=4.0.0"></script>'
+          plant_pattern = r'<script src="v37-mobile-plant-screen\.js(?:\?v=[^"\']*)?"></script>'
+          if re.search(plant_pattern, s2):
+              s2 = re.sub(plant_pattern, plant_tag, s2, count=1)
+          else:
+              gallery_exact = r'(<script src="v36-mobile-gallery\.js\?v=3\.9\.0"></script>)'
+              s2, inserted = re.subn(gallery_exact, r'\1\n  ' + plant_tag, s2, count=1)
+              if inserted == 0:
+                  raise SystemExit('Could not place v37-mobile-plant-screen.js after mobile gallery')
+
           p.write_text(s2, encoding='utf-8')
       - name: Commit mobile asset loader
         shell: bash
@@ -56,5 +67,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Load mobile gallery UX v3.9.0'
+          git commit -m 'Load mobile plant profile v4.0.0'
           git push
