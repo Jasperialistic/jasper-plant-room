@@ -1,4 +1,4 @@
-name: Plant Room v3.4 aliases and shortcut search
+name: Plant Room v3.5 Telegram reference packet
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Patch v3.4 aliases and shortcut search
+      - name: Patch v3.5 Telegram reference packet
         shell: python
         run: |
           import re
@@ -24,37 +24,37 @@ jobs:
 
           page=Path('index.html')
           text=page.read_text(encoding='utf-8')
-          old_marker='Cloud build v3.3: Telegram inbound photo archive'
-          new_marker='Cloud build v3.4: plant aliases and shortcut search'
-          v33='<script src="v33-telegram-inbound.js?v=3.3.0"></script>'
+          old_marker='Cloud build v3.4: plant aliases and shortcut search'
+          new_marker='Cloud build v3.5: focused Telegram reference packet'
           v34='<script src="v34-plant-aliases.js?v=3.4.0"></script>'
+          v35='<script src="v35-telegram-reference-packet.js?v=3.5.0"></script>'
           changed=False
 
           if new_marker not in text:
               if old_marker not in text:
-                  raise SystemExit('Expected v3.3 build marker not found')
+                  raise SystemExit('Expected v3.4 build marker not found')
               text=text.replace(old_marker,new_marker,1)
               changed=True
 
-          if v34 not in text:
-              if v33 in text:
-                  text=text.replace(v33,v33+'\n  '+v34,1)
+          if v35 not in text:
+              if v34 in text:
+                  text=text.replace(v34,v34+'\n  '+v35,1)
               elif '</body>' in text:
-                  text=text.replace('</body>','  '+v34+'\n</body>',1)
+                  text=text.replace('</body>','  '+v35+'\n</body>',1)
               else:
                   raise SystemExit('Closing body tag not found')
               changed=True
 
-          required=['function openPlant(','v33-telegram-inbound.js?v=3.3.0','v34-plant-aliases.js?v=3.4.0']
+          required=['function openPlant(','v34-plant-aliases.js?v=3.4.0','v35-telegram-reference-packet.js?v=3.5.0']
           missing=[x for x in required if x not in text]
           if missing:
-              raise SystemExit('Missing alias markers: '+', '.join(missing))
+              raise SystemExit('Missing Telegram reference markers: '+', '.join(missing))
 
           if changed:
               page.write_text(text,encoding='utf-8')
-              print('v3.4 alias hook installed')
+              print('v3.5 Telegram reference packet hook installed')
           else:
-              print('v3.4 already installed')
+              print('v3.5 already installed')
 
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,flags=re.S)
           if scripts:
@@ -71,6 +71,7 @@ jobs:
           node --check v32-jasper-jungle-bot.js
           node --check v33-telegram-inbound.js
           node --check v34-plant-aliases.js
+          node --check v35-telegram-reference-packet.js
           if [ -s /tmp/plant-inline-app.js ]; then node --check /tmp/plant-inline-app.js; fi
 
       - name: Commit updated site
@@ -81,6 +82,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Add plant aliases and shortcut search"
+            git commit -m "Use focused Telegram plant reference packets"
             git push
           fi
