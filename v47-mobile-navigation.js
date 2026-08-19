@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.10.0 — pinch zoom + two-level mobile navigation */
+/* Jasper's Plant Room v4.11.0 — sticky tabbed plant profiles */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -580,6 +580,129 @@
   }
   const scan=()=>{enhance(document.getElementById('photoLightbox'));enhance(document.getElementById('growthPhotoViewer'));};
   scan();new MutationObserver(scan).observe(document.body,{childList:true});
+})();
+
+/* Mobile plant profile: sticky Gallery / Growth / Details / Care sections. */
+(function(){
+  const mq=window.matchMedia('(max-width:700px)');
+  const css=`
+@media(max-width:700px){
+  #plantDialog .profile-tabs{display:none!important}
+  #plantDialog .v411-tabs{
+    position:sticky;top:calc(58px + env(safe-area-inset-top));z-index:48;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;
+    margin:0 -14px;padding:7px 10px 8px;background:rgba(15,26,23,.97);
+    border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)
+  }
+  #plantDialog .v411-tab{
+    position:relative;min-width:0;min-height:42px;padding:0 3px;border:0;border-radius:10px;
+    background:transparent;color:#83978e;font:780 11px/1 system-ui,sans-serif;letter-spacing:.01em;
+    -webkit-tap-highlight-color:transparent
+  }
+  #plantDialog .v411-tab[aria-selected="true"]{background:#1c3028;color:#f0f5f2}
+  #plantDialog .v411-tab[aria-selected="true"]::after{
+    content:'';position:absolute;left:22%;right:22%;bottom:4px;height:2px;border-radius:99px;background:#d5be85
+  }
+  #plantDialog .v411-tab-count{display:inline-block;margin-left:2px;color:#d5be85;font-size:9px;font-variant-numeric:tabular-nums}
+  #plantDialog .v411-panel{display:none;min-height:calc(100dvh - 150px);padding-top:10px}
+  #plantDialog .v411-panel[data-active="1"]{display:block}
+  #plantDialog .v411-panel[data-v411-panel="gallery"]{padding-top:0}
+  #plantDialog .v411-panel>.profile-panel{display:block!important;margin-bottom:18px}
+  #plantDialog .v411-panel>.gallery-main-wrap{margin-top:0}
+  #plantDialog .v411-section-title{margin:8px 0 3px;font-size:18px;line-height:1.2}
+  #plantDialog .v411-section-note{margin:0 0 13px;color:#89a097;font-size:11px;line-height:1.4}
+  #plantDialog .v411-care-details{display:block;margin:6px 0 14px;border-top:1px solid #263b33;border-bottom:1px solid #263b33}
+  #plantDialog .v411-empty{margin:18px 0;padding:16px;border:1px dashed #30473e;border-radius:14px;color:#8ea198;text-align:center;font-size:12px}
+  #plantDialog .v411-panel .chatgpt-share-row,#plantDialog .v411-panel #plantAiReviewPanel{margin-top:14px}
+}
+@media(min-width:701px){#plantDialog .v411-tabs{display:none!important}#plantDialog .v411-panel{display:block!important;min-height:0!important;padding:0!important}}
+`;
+  const style=document.createElement('style');style.id='v411TabbedPlantStyles';style.textContent=css;document.head.appendChild(style);
+  const dlg=document.getElementById('plantDialog');
+  if(!dlg)return;
+  let queued=false;
+
+  function sectionIntro(panel,title,note){
+    if(panel.querySelector('.v411-section-title'))return;
+    const h=document.createElement('h3');h.className='v411-section-title';h.textContent=title;
+    const p=document.createElement('p');p.className='v411-section-note';p.textContent=note;
+    panel.append(h,p);
+  }
+  function activate(inner,name,{scroll=true}={}){
+    if(!['gallery','growth','details','care'].includes(name))name='gallery';
+    inner.querySelectorAll('.v411-tab').forEach(tab=>{
+      const active=tab.dataset.v411Tab===name;tab.setAttribute('aria-selected',active?'true':'false');tab.tabIndex=active?0:-1;
+    });
+    inner.querySelectorAll('.v411-panel').forEach(panel=>panel.dataset.active=panel.dataset.v411Panel===name?'1':'0');
+    if(scroll){
+      const tabs=inner.querySelector('.v411-tabs');
+      requestAnimationFrame(()=>tabs?.scrollIntoView({block:'start',behavior:'auto'}));
+    }
+  }
+  function build(inner){
+    const head=inner.querySelector('.modal-head');if(!head)return false;
+    let tabs=inner.querySelector('.v411-tabs');
+    if(!tabs){
+      const oldTabs=inner.querySelector('.profile-tabs');
+      const growthCount=oldTabs?.querySelector('[data-profile-tab="growth"] .chip')?.textContent?.trim()||'';
+      const initial=oldTabs?.querySelector('.profile-tab.active')?.dataset.profileTab||'gallery';
+      tabs=document.createElement('div');tabs.className='v411-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Plant profile sections');
+      tabs.innerHTML=`<button type="button" class="v411-tab" data-v411-tab="gallery" role="tab">Gallery</button><button type="button" class="v411-tab" data-v411-tab="growth" role="tab">Growth${growthCount?` <span class="v411-tab-count">${growthCount}</span>`:''}</button><button type="button" class="v411-tab" data-v411-tab="details" role="tab">Details</button><button type="button" class="v411-tab" data-v411-tab="care" role="tab">Care</button>`;
+      head.insertAdjacentElement('afterend',tabs);
+      const panels=['gallery','growth','details','care'].map(name=>{
+        const panel=document.createElement('section');panel.className='v411-panel';panel.dataset.v411Panel=name;panel.setAttribute('role','tabpanel');tabs.insertAdjacentElement('afterend',panel);
+        return panel;
+      });
+      tabs.after(...panels);
+      tabs.querySelectorAll('.v411-tab').forEach(tab=>tab.addEventListener('click',()=>activate(inner,tab.dataset.v411Tab)));
+      activate(inner,initial,{scroll:false});
+      inner.dataset.v411Structured='1';
+    }else if(tabs.previousElementSibling!==head){
+      head.insertAdjacentElement('afterend',tabs);
+    }
+    return true;
+  }
+  function moveContent(inner){
+    const gallery=inner.querySelector('[data-v411-panel="gallery"]');
+    const growth=inner.querySelector('[data-v411-panel="growth"]');
+    const details=inner.querySelector('[data-v411-panel="details"]');
+    const care=inner.querySelector('[data-v411-panel="care"]');
+    if(!gallery||!growth||!details||!care)return;
+    const hero=inner.querySelector('.gallery-main-wrap');if(hero&&hero.parentElement!==gallery)gallery.appendChild(hero);
+    const caption=inner.querySelector('#mainPhotoCaption');if(caption&&caption.parentElement!==gallery)gallery.appendChild(caption);
+    const galleryPanel=inner.querySelector('.profile-panel[data-panel="gallery"]');if(galleryPanel&&galleryPanel.parentElement!==gallery)gallery.appendChild(galleryPanel);
+    const growthPanel=inner.querySelector('.profile-panel[data-panel="growth"]');if(growthPanel&&growthPanel.parentElement!==growth)growth.appendChild(growthPanel);
+
+    if(!details.querySelector('.v411-section-title'))sectionIntro(details,'Plant details','Pot, medium, location, lighting and growing environment.');
+    const detailGrid=inner.querySelector('.detail-grid');
+    if(!care.querySelector('.v411-section-title'))sectionIntro(care,'Care','Latest checks, care notes and plant actions.');
+    let careDetails=care.querySelector('.v411-care-details');
+    if(!careDetails){careDetails=document.createElement('div');careDetails.className='v411-care-details';care.appendChild(careDetails);}
+    if(detailGrid){
+      detailGrid.querySelectorAll('.detail').forEach(row=>{
+        const label=row.querySelector('span')?.textContent?.trim().toLowerCase();
+        if(label==='last care'||label==='next check')careDetails.appendChild(row);
+      });
+      if(detailGrid.parentElement!==details)details.appendChild(detailGrid);
+    }
+    const rule=inner.querySelector('.rule-box');if(rule&&rule.parentElement!==care)care.appendChild(rule);
+    const actions=inner.querySelector('.quick-actions');if(actions&&actions.parentElement!==care)care.appendChild(actions);
+    inner.querySelectorAll('.chatgpt-share-row,#plantAiReviewPanel').forEach(el=>{if(el.parentElement!==care)care.appendChild(el);});
+    care.querySelector('.v411-empty')?.remove();
+    const meaningful=[...care.children].some(el=>!el.classList.contains('v411-section-title')&&!el.classList.contains('v411-section-note')&&!(el.classList.contains('v411-care-details')&&!el.children.length));
+    if(!meaningful){const empty=document.createElement('div');empty.className='v411-empty';empty.textContent='No care information has been added yet.';care.appendChild(empty);}
+    careDetails.hidden=!careDetails.children.length;
+  }
+  function sync(){
+    queued=false;if(!mq.matches||!dlg.open)return;
+    const inner=dlg.querySelector('.dialog-inner');if(!inner||!build(inner))return;
+    moveContent(inner);
+  }
+  function schedule(){if(queued)return;queued=true;requestAnimationFrame(sync);}
+  new MutationObserver(schedule).observe(dlg,{childList:true,subtree:true});
+  dlg.addEventListener('close',()=>{queued=false;});
+  if(typeof mq.addEventListener==='function')mq.addEventListener('change',schedule);
+  schedule();
 })();
 
 /* Enlarged gallery and growth photos: pinch zoom and one-finger pan. */
