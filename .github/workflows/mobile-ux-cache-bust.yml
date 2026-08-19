@@ -11,6 +11,7 @@ on:
       - 'v40-editor-access-tweaks.js'
       - 'v41-desktop-gallery-wheel.js'
       - 'v42-desktop-gallery-menu.js'
+      - 'v43-desktop-gallery-menu-toplayer.js'
       - '.github/workflows/mobile-ux-cache-bust.yml'
 
 permissions:
@@ -110,6 +111,16 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v42 desktop gallery menu')
 
+          top_tag = '<script src="v43-desktop-gallery-menu-toplayer.js?v=4.3.2"></script>'
+          top_pattern = r'<script src="v43-desktop-gallery-menu-toplayer\.js(?:\?v=[^"\']*)?"></script>'
+          if re.search(top_pattern, s2):
+              s2 = re.sub(top_pattern, top_tag, s2, count=1)
+          else:
+              menu_exact = r'(<script src="v42-desktop-gallery-menu\.js\?v=4\.3\.1"></script>)'
+              s2, inserted = re.subn(menu_exact, r'\1\n  ' + top_tag, s2, count=1)
+              if inserted == 0:
+                  raise SystemExit('Could not place v43 desktop gallery menu top-layer fix')
+
           p.write_text(s2, encoding='utf-8')
       - name: Commit mobile asset loader
         shell: bash
@@ -122,5 +133,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Load desktop gallery menu v4.3.1'
+          git commit -m 'Load desktop gallery menu top-layer fix v4.3.2'
           git push
