@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v3.0 — compact growth timeline gallery */
+/* Jasper's Plant Room v4.12.0 — growth timeline captions and photo management */
 (function(){
   const PAGE_SIZE=30;
   const visibleByPlant=new Map();
@@ -47,6 +47,18 @@
 .growth-view-note{font-size:12px;color:#9eada7;line-height:1.4;min-height:17px;margin-top:3px}
 .growth-view-counter{font-size:11px;color:#71817b;margin-top:3px;font-variant-numeric:tabular-nums}
 
+#growthPhotoEditDialog{width:min(470px,calc(100vw - 24px));margin:auto;padding:0;border:1px solid #31483f;border-radius:18px;background:#13221d;color:#edf4f0;box-shadow:0 22px 65px rgba(0,0,0,.55)}
+#growthPhotoEditDialog::backdrop{background:rgba(2,7,5,.78);backdrop-filter:blur(3px)}
+.growth-edit-inner{padding:18px}
+.growth-edit-inner h3{margin:3px 0 5px;font-size:19px}
+.growth-edit-inner>p{margin:0 0 15px;color:#8fa39a;font-size:12px;line-height:1.4}
+.growth-edit-inner label{display:block;margin:0 0 13px;color:#9eb0a8;font-size:11px;font-weight:750}
+.growth-edit-inner input,.growth-edit-inner textarea{display:block;width:100%;box-sizing:border-box;margin-top:6px;border:1px solid #365047;border-radius:11px;background:#0d1915;color:#edf4f0;font:inherit;font-size:14px;padding:11px;outline:none}
+.growth-edit-inner input:focus,.growth-edit-inner textarea:focus{border-color:#8caf9e;box-shadow:0 0 0 2px rgba(140,175,158,.12)}
+.growth-edit-inner textarea{min-height:100px;resize:vertical;line-height:1.45}
+.growth-edit-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-top:5px}
+.growth-edit-actions button{min-height:46px}
+
 @media(max-width:650px){
   .growth-gallery-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
   .growth-thumb{border-radius:7px}
@@ -59,6 +71,8 @@
   .growth-view-nav{width:39px;height:58px;border-radius:11px;font-size:29px;background:rgba(0,0,0,.55)}
   .growth-view-prev{left:2px}.growth-view-next{right:2px}
   .growth-view-bottom{padding:6px 10px 9px}
+  #growthPhotoEditDialog{width:calc(100vw - 18px);border-radius:17px}
+  .growth-edit-inner{padding:16px 14px max(16px,env(safe-area-inset-bottom))}
 }
 `;
   document.head.appendChild(style);
@@ -104,7 +118,7 @@
         <div class="growth-view-title"><strong id="growthViewPlant"></strong><span>Growth progress</span></div>
         <div class="growth-view-actions">
           <button type="button" class="growth-view-icon" id="growthViewManage" aria-label="Manage photo" title="Manage photo">⋯</button>
-          <div class="growth-view-menu" id="growthViewMenu" hidden><button type="button" class="danger" id="growthViewDelete">Delete this photo</button></div>
+          <div class="growth-view-menu" id="growthViewMenu" hidden><button type="button" id="growthViewEdit">Edit date / caption</button><button type="button" class="danger" id="growthViewDelete">Delete photo</button></div>
           <button type="button" class="growth-view-icon" id="growthViewClose" aria-label="Close">×</button>
         </div>
       </div>
@@ -125,6 +139,7 @@
     document.getElementById('growthViewPrev').onclick=e=>{e.stopPropagation();moveGrowthViewer(-1);};
     document.getElementById('growthViewNext').onclick=e=>{e.stopPropagation();moveGrowthViewer(1);};
     document.getElementById('growthViewManage').onclick=e=>{e.stopPropagation();const menu=document.getElementById('growthViewMenu');menu.hidden=!menu.hidden;};
+    document.getElementById('growthViewEdit').onclick=e=>{e.stopPropagation();document.getElementById('growthViewMenu').hidden=true;openGrowthEdit();};
     document.getElementById('growthViewDelete').onclick=async()=>{
       const item=growthViewerState.items[growthViewerState.index];
       const p=db.plants.find(x=>String(x.cloudId)===String(growthViewerState.plantId));
@@ -206,6 +221,53 @@
   }
   window.openGrowthViewer=openGrowthViewer;
   window.closeGrowthViewer=closeGrowthViewer;
+
+  function ensureGrowthEditDialog(){
+    let dlg=document.getElementById('growthPhotoEditDialog');
+    if(dlg)return dlg;
+    dlg=document.createElement('dialog');dlg.id='growthPhotoEditDialog';dlg.setAttribute('aria-label','Edit growth photo');
+    dlg.innerHTML=`<div class="growth-edit-inner"><div class="eyebrow">GROWTH PHOTO</div><h3>Edit date and caption</h3><p>Add context so this progress photo is useful later.</p><label>Photo date<input type="date" id="growthEditDate"></label><label>Caption<textarea id="growthEditNote" placeholder="What changed? New leaf, repot, recovery, root progress…"></textarea></label><div class="growth-edit-actions"><button type="button" class="ghost" id="growthEditCancel">Cancel</button><button type="button" class="primary" id="growthEditSave">Save changes</button></div></div>`;
+    document.body.appendChild(dlg);
+    dlg.querySelector('#growthEditCancel').onclick=()=>dlg.close();
+    dlg.querySelector('#growthEditSave').onclick=saveGrowthEdit;
+    dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
+    dlg.addEventListener('cancel',e=>{e.preventDefault();dlg.close();});
+    return dlg;
+  }
+
+  function openGrowthEdit(){
+    const item=growthViewerState.items[growthViewerState.index];if(!item)return;
+    const dlg=ensureGrowthEditDialog();
+    dlg.querySelector('#growthEditDate').value=item.photo_date||'';
+    dlg.querySelector('#growthEditNote').value=item.note||'';
+    if(!dlg.open)dlg.showModal();
+  }
+
+  async function saveGrowthEdit(){
+    const item=growthViewerState.items[growthViewerState.index];
+    const p=db.plants.find(x=>String(x.cloudId)===String(growthViewerState.plantId));
+    const dlg=document.getElementById('growthPhotoEditDialog');
+    if(!item||!p||!dlg)return;
+    const btn=dlg.querySelector('#growthEditSave');
+    const patch={photo_date:dlg.querySelector('#growthEditDate').value||null,note:dlg.querySelector('#growthEditNote').value.trim()||null};
+    btn.disabled=true;btn.textContent='Saving…';
+    try{
+      if(typeof setCloudStatus==='function')setCloudStatus('Saving growth caption…');
+      const result=await sb.from('plant_photos').update(patch).eq('id',item.id).eq('plant_id',p.cloudId).eq('kind','growth');
+      if(result.error)throw result.error;
+      item.photo_date=patch.photo_date||'';item.note=patch.note||'';
+      const stored=(db.photos||[]).find(x=>String(x.id)===String(item.id));
+      if(stored){stored.photo_date=item.photo_date;stored.note=item.note;}
+      renderGrowthViewer();
+      const thumb=document.querySelector(`#plantDialog [data-growth-view="${CSS.escape(String(item.id))}"] .growth-date`);
+      if(thumb)thumb.textContent=growthLabel(item);
+      dlg.close();
+      if(typeof setCloudStatus==='function')setCloudStatus('Growth caption saved');
+    }catch(error){
+      console.error('Growth photo edit failed',error);alert(error?.message||'Could not save the growth photo caption.');
+      if(typeof setCloudStatus==='function')setCloudStatus('Sync error',true);
+    }finally{btn.disabled=false;btn.textContent='Save changes';}
+  }
 
   function bindGrowthGallery(p){
     const root=document.getElementById('plantDialog');

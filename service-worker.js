@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.11.0 — conservative PWA app shell */
-const CACHE_NAME='jasper-plant-room-shell-v4.11.0';
+/* Jasper's Plant Room v4.12.0 — conservative PWA app shell */
+const CACHE_NAME='jasper-plant-room-shell-v4.12.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
@@ -8,7 +8,8 @@ const SHELL=[
   './apple-touch-icon.png',
   './v46-pwa-shell.js?v=4.6.0',
   './v47-mobile-navigation.js?v=4.8.0',
-  './v25-photo-viewer.js?v=3.8.0'
+  './v25-photo-viewer.js?v=3.8.0',
+  './v30-growth-gallery.js?v=3.0.0'
 ];
 
 self.addEventListener('install',event=>{

@@ -46,6 +46,7 @@
   #photoLightbox .photo-lightbox-bottom{padding:7px max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
   #photoLightbox .photo-lightbox-caption:empty{display:none}
   #photoLightbox .photo-lightbox-share{min-height:44px;padding:9px 18px;font-size:13px}
+  #photoLightbox .photo-lightbox-actions,#growthPhotoViewer #growthViewShare{display:none!important}
   #photoLightbox .photo-lightbox-hint{display:none}
 
   #growthPhotoViewer .growth-view-top{padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 5px max(8px,env(safe-area-inset-left))}
