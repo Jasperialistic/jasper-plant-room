@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.9.2 — conservative PWA app shell */
-const CACHE_NAME='jasper-plant-room-shell-v4.9.2';
+/* Jasper's Plant Room v4.9.3 — conservative PWA app shell */
+const CACHE_NAME='jasper-plant-room-shell-v4.9.3';
 const SHELL=[
   './',
   './manifest.webmanifest',
@@ -23,6 +23,8 @@ self.addEventListener('activate',event=>{
     caches.keys()
       .then(keys=>Promise.all(keys.filter(key=>key.startsWith('jasper-plant-room-shell-')&&key!==CACHE_NAME).map(key=>caches.delete(key))))
       .then(()=>self.clients.claim())
+      .then(()=>self.clients.matchAll({type:'window'}))
+      .then(windows=>Promise.all(windows.map(client=>client.navigate(client.url))))
   );
 });
 

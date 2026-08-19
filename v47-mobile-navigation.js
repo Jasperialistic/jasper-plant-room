@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.9.2 — two-level mobile edge-back navigation */
+/* Jasper's Plant Room v4.9.3 — two-level mobile edge-back navigation */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -459,7 +459,7 @@
   let gesture=null;
   dlg.addEventListener('touchstart',e=>{
     if(!dlg.open||e.touches.length!==1)return;
-    const t=e.touches[0];if(t.clientX>38)return;
+    const t=e.touches[0];if(t.clientX>56)return;
     gesture={startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastTime:performance.now(),dx:0,locked:null};
   },{capture:true,passive:true});
   dlg.addEventListener('touchmove',e=>{
@@ -526,7 +526,7 @@
     let gesture=null;
     dlg.addEventListener('touchstart',e=>{
       if(!dlg.open||e.touches.length!==1)return;
-      const t=e.touches[0];if(t.clientX>38)return;
+      const t=e.touches[0];if(t.clientX>56)return;
       gesture={startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastTime:performance.now(),dx:0,locked:null};
     },{capture:true,passive:true});
     dlg.addEventListener('touchmove',e=>{
