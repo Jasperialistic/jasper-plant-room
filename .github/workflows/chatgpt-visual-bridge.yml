@@ -36,7 +36,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-      - name: Publish bridge pointer
+      - name: Publish run pointer only
         shell: bash
         run: |
           set -euo pipefail
@@ -44,8 +44,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan chatgpt-visual-bridge
           git rm -rf . >/dev/null 2>&1 || true
-          cp /tmp/evidence.jpg evidence.jpg
           printf '%s\n' "${GITHUB_RUN_ID}" > run-id.txt
-          git add evidence.jpg run-id.txt
-          git commit -m "Refresh ChatGPT visual evidence"
+          git add run-id.txt
+          git commit -m "Refresh ChatGPT visual bridge pointer"
           git push --force origin HEAD:chatgpt-visual-bridge
