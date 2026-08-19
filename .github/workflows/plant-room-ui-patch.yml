@@ -1,4 +1,4 @@
-name: Plant Room v2.8 ChatGPT share
+name: Plant Room v2.9 actual photo sharing
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Patch v2.8 Share with ChatGPT
+      - name: Patch v2.9 actual photo sharing
         shell: python
         run: |
           import re
@@ -24,37 +24,34 @@ jobs:
 
           page=Path('index.html')
           text=page.read_text(encoding='utf-8')
-          old_marker='Cloud build v2.7: permanent bundled-photo delete'
-          new_marker='Cloud build v2.8: Share with ChatGPT plant reference'
-          v27='<script src="v27-permanent-delete.js?v=2.7.0"></script>'
-          v28='<script src="v28-chatgpt-share.js?v=2.8.0"></script>'
+          old_marker='Cloud build v2.8: Share with ChatGPT plant reference'
+          new_marker='Cloud build v2.9: Share actual plant photos with ChatGPT'
+          old_script='<script src="v28-chatgpt-share.js?v=2.8.0"></script>'
+          new_script='<script src="v28-chatgpt-share.js?v=2.9.0"></script>'
           changed=False
 
           if new_marker not in text:
               if old_marker not in text:
-                  raise SystemExit('Expected v2.7 build marker not found')
+                  raise SystemExit('Expected v2.8 build marker not found')
               text=text.replace(old_marker,new_marker,1)
               changed=True
 
-          if v28 not in text:
-              if v27 in text:
-                  text=text.replace(v27,v27+'\n  '+v28,1)
-              elif '</body>' in text:
-                  text=text.replace('</body>','  '+v28+'\n</body>',1)
-              else:
-                  raise SystemExit('Closing body tag not found')
+          if new_script not in text:
+              if old_script not in text:
+                  raise SystemExit('Expected v2.8 share script hook not found')
+              text=text.replace(old_script,new_script,1)
               changed=True
 
-          required=['id="addPlantForm"','function openPlant(','v27-permanent-delete.js','v28-chatgpt-share.js']
+          required=['id="addPlantForm"','function openPlant(','v27-permanent-delete.js','v28-chatgpt-share.js?v=2.9.0']
           missing=[x for x in required if x not in text]
           if missing:
               raise SystemExit('Missing required markers: '+', '.join(missing))
 
           if changed:
               page.write_text(text,encoding='utf-8')
-              print('v2.8 ChatGPT share hook installed')
+              print('v2.9 photo-file sharing hook installed')
           else:
-              print('v2.8 already installed')
+              print('v2.9 already installed')
 
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,flags=re.S)
           if scripts:
@@ -76,6 +73,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Add Share with ChatGPT plant workflow"
+            git commit -m "Share actual plant photos with ChatGPT"
             git push
           fi
