@@ -7,6 +7,7 @@ on:
       - 'service-worker.js'
       - 'generate-pwa-icons.py'
       - 'v46-pwa-shell.js'
+      - 'v47-mobile-navigation.js'
       - '.github/workflows/pwa-shell-deploy.yml'
 
 permissions:
@@ -74,6 +75,16 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v46 PWA shell after v45')
 
+          nav_tag = '<script src="v47-mobile-navigation.js?v=4.7.0"></script>'
+          nav_pattern = r'<script src="v47-mobile-navigation\.js(?:\?v=[^"\']*)?"></script>'
+          if re.search(nav_pattern, s):
+              s = re.sub(nav_pattern, nav_tag, s, count=1)
+          else:
+              pwa_exact = r'(<script src="v46-pwa-shell\.js\?v=4\.6\.0"></script>)'
+              s, inserted = re.subn(pwa_exact, r'\1\n  ' + nav_tag, s, count=1)
+              if inserted == 0:
+                  raise SystemExit('Could not place v47 mobile navigation after v46')
+
           p.write_text(s, encoding='utf-8')
 
       - name: Commit generated app shell assets
@@ -87,5 +98,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html pwa-icon-192.png pwa-icon-512.png apple-touch-icon.png
-          git commit -m 'Load installable mobile app shell v4.6.0'
+          git commit -m 'Load app-style mobile navigation v4.7.0'
           git push
