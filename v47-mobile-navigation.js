@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.9.4 — race-safe two-level mobile edge-back navigation */
+/* Jasper's Plant Room v4.9.5 — unified swipe and X-button navigation cleanup */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -490,6 +490,15 @@
   },{capture:true,passive:false});
   dlg.addEventListener('touchcancel',()=>{gesture=null;reset();},{capture:true,passive:true});
   dlg.addEventListener('close',reset);
+  dlg.addEventListener('click',e=>{
+    if(!e.target.closest('#closePlant'))return;
+    gesture=null;reset();
+    requestAnimationFrame(()=>{
+      if(dlg.open)dlg.close();
+      document.body.style.overflow='';
+      document.body.classList.remove('v47-plant-open');
+    });
+  },true);
 })();
 
 /* Full-screen photo: edge-swipe back one level to the open plant profile. */
@@ -553,6 +562,14 @@
     },{capture:true,passive:false});
     dlg.addEventListener('touchcancel',()=>{gesture=null;reset();},{capture:true,passive:true});
     dlg.addEventListener('close',reset);
+    dlg.addEventListener('click',e=>{
+      if(!e.target.closest('#photoLightboxClose,#growthViewClose'))return;
+      gesture=null;reset();
+      requestAnimationFrame(()=>{
+        if(dlg.open)dlg.close();
+        document.body.style.overflow='';
+      });
+    },true);
   }
   const scan=()=>{enhance(document.getElementById('photoLightbox'));enhance(document.getElementById('growthPhotoViewer'));};
   scan();new MutationObserver(scan).observe(document.body,{childList:true});
