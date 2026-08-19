@@ -158,7 +158,10 @@
     stage.addEventListener('touchcancel',function(){touchStart=null;},{passive:true});
 
     lb.addEventListener('cancel',function(e){e.preventDefault();closePhotoLightbox();});
-    lb.addEventListener('close',function(){document.body.style.overflow=photoLightboxState.bodyOverflow||'';});
+    lb.addEventListener('close',function(){
+      document.body.style.overflow=photoLightboxState.bodyOverflow||'';
+      photoLightboxState.bodyOverflow='';
+    });
 
     if(!window.__plantV25PhotoKeysBound){
       window.__plantV25PhotoKeysBound=true;
@@ -217,7 +220,10 @@
   closePhotoLightbox = function(){
     const lb=document.getElementById('photoLightbox');
     if(lb && lb.tagName==='DIALOG' && lb.open)lb.close();
-    else document.body.style.overflow=photoLightboxState.bodyOverflow||'';
+    else{
+      document.body.style.overflow=photoLightboxState.bodyOverflow||'';
+      photoLightboxState.bodyOverflow='';
+    }
   };
 
   function bindPlantBackdropClose(){

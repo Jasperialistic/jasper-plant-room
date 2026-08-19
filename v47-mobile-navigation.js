@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.9.5 — unified swipe and X-button navigation cleanup */
+/* Jasper's Plant Room v4.9.6 — consumed photo scroll state + unified navigation cleanup */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -489,7 +489,9 @@
     }
   },{capture:true,passive:false});
   dlg.addEventListener('touchcancel',()=>{gesture=null;reset();},{capture:true,passive:true});
-  dlg.addEventListener('close',reset);
+  dlg.addEventListener('close',()=>{
+    reset();document.body.style.overflow='';document.body.classList.remove('v47-plant-open');
+  });
   dlg.addEventListener('click',e=>{
     if(!e.target.closest('#closePlant'))return;
     gesture=null;reset();
@@ -561,7 +563,10 @@
       }
     },{capture:true,passive:false});
     dlg.addEventListener('touchcancel',()=>{gesture=null;reset();},{capture:true,passive:true});
-    dlg.addEventListener('close',reset);
+    dlg.addEventListener('close',()=>{
+      reset();document.body.style.overflow='';
+      if(dlg.id==='photoLightbox'&&typeof photoLightboxState!=='undefined')photoLightboxState.bodyOverflow='';
+    });
     dlg.addEventListener('click',e=>{
       if(!e.target.closest('#photoLightboxClose,#growthViewClose'))return;
       gesture=null;reset();
