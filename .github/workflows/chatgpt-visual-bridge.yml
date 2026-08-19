@@ -28,7 +28,15 @@ jobs:
           test "$BYTES" -gt 10000
           echo "Fetched $BYTES bytes"
 
-      - name: Publish one-file bridge branch
+      - name: Upload temporary evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plant-visual-evidence
+          path: /tmp/evidence.jpg
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Publish bridge pointer
         shell: bash
         run: |
           set -euo pipefail
@@ -37,6 +45,7 @@ jobs:
           git checkout --orphan chatgpt-visual-bridge
           git rm -rf . >/dev/null 2>&1 || true
           cp /tmp/evidence.jpg evidence.jpg
-          git add evidence.jpg
+          printf '%s\n' "${GITHUB_RUN_ID}" > run-id.txt
+          git add evidence.jpg run-id.txt
           git commit -m "Refresh ChatGPT visual evidence"
           git push --force origin HEAD:chatgpt-visual-bridge
