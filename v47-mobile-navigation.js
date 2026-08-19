@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.16.2 — exact registered group filters + cache-safe updates */
+/* Jasper's Plant Room v4.17.0 — clear care actions and recorded status */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -497,7 +497,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.16.2';
+  const VERSION='v4.17.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -961,6 +961,56 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
   }
   const observer=new MutationObserver(()=>requestAnimationFrame(enhanceQueue));observer.observe(document.getElementById('queue'),{childList:true});
   enhanceQueue();
+})();
+
+/* Care UI: separate saved care state from buttons that perform new actions. */
+(function(){
+  const css=`
+.v417-care-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0 4px}
+.v417-care-state{min-width:0;padding:11px 12px;border:1px solid #2d463b;border-radius:13px;background:#12211c}
+.v417-care-state span{display:block;color:#82968d;font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.v417-care-state strong{display:block;margin-top:5px;color:#e8f0ec;font-size:13px;line-height:1.25;overflow-wrap:anywhere}
+.v417-care-state small{display:block;margin-top:3px;color:#8fa39a;font-size:10px}
+.v417-care-state[data-care-kind="water"]{border-color:#3d6658;background:#173027}.v417-care-state[data-care-kind="water"] strong{color:#a9dfc5}
+.v417-care-state[data-care-kind="moist"]{border-color:#6e5c36;background:#2a2418}.v417-care-state[data-care-kind="moist"] strong{color:#efd18b}
+#plantDialog .quick-actions{margin-top:10px;padding-top:12px;border-top:1px solid #263b33}
+#plantDialog .quick-actions::before{content:'LOG NEW ACTION';flex:0 0 100%;color:#71877d;font-size:9px;font-weight:850;letter-spacing:.11em}
+#plantDialog .quick-actions [data-quick]{border:1px solid #355045!important;background:#172820!important;color:#dce8e2!important;font-weight:780!important}
+#plantDialog .quick-actions [data-quick="water"]{border-color:#477363!important;color:#b9e2ce!important}
+#plantDialog .quick-actions [data-quick="moist"]{border-color:#685a3a!important;color:#ead092!important}
+#plantDialog .quick-actions [data-quick="custom"]{color:#aebfb7!important}
+@media(max-width:700px){
+  .v417-care-summary{gap:6px;margin-top:13px}
+  .v417-care-state{padding:10px 9px}
+  .v417-care-state strong{font-size:12px}
+}
+`;
+  const style=document.createElement('style');style.id='v417CareStateStyles';style.textContent=css;document.head.appendChild(style);
+  const actionKind=action=>{const value=String(action||'').toLowerCase();return /water|shower|reservoir topped/.test(value)?'water':/moist|checked/.test(value)?'moist':'other';};
+  const dateLabel=date=>date===isoToday()?'Today':fmt(date);
+  function enhanceProfile(p){
+    const actions=document.querySelector('#plantDialog .quick-actions');if(!actions||!p)return;
+    actions.querySelectorAll('[data-quick]').forEach(button=>button.classList.remove('primary'));
+    let summary=document.querySelector('#plantDialog .v417-care-summary');
+    if(!summary){summary=document.createElement('div');summary.className='v417-care-summary';actions.before(summary);}
+    const last=p.lastAction||'No care recorded',kind=actionKind(last),next=p.nextCheck?fmt(p.nextCheck):(isReservoir(p)?'Reservoir-based':'Not scheduled');
+    summary.innerHTML=`<div class="v417-care-state" data-care-kind="${kind}"><span>Last recorded</span><strong>${esc(last)}</strong><small>${p.lastCare?dateLabel(p.lastCare):'No date'}</small></div><div class="v417-care-state"><span>Next check</span><strong>${esc(next)}</strong><small>${p.nextCheck?esc(statusLabel(p)):'Care as needed'}</small></div>`;
+  }
+  if(typeof openPlant==='function'){
+    const previousOpenPlant=openPlant;
+    openPlant=function(cloudId){const result=previousOpenPlant.apply(this,arguments),p=(db.plants||[]).find(x=>String(x.cloudId)===String(cloudId));requestAnimationFrame(()=>enhanceProfile(p));return result;};
+  }
+  function clarifyGridStatuses(){
+    document.querySelectorAll('#plantGrid .plant-card[data-id]').forEach(card=>{
+      const p=(db.plants||[]).find(x=>String(x.cloudId)===String(card.dataset.id)),badge=card.querySelector('.status');
+      if(!p||!badge)return;
+      const status=statusOf(p);if(status==='upcoming'&&p.nextCheck)badge.textContent=`Next ${fmt(p.nextCheck)}`;
+    });
+  }
+  if(typeof renderPlants==='function'){
+    const previousRenderPlants=renderPlants;renderPlants=function(){const result=previousRenderPlants.apply(this,arguments);clarifyGridStatuses();return result;};
+  }
+  clarifyGridStatuses();
 })();
 
 /* Enlarged gallery and growth photos: pinch zoom and one-finger pan. */
