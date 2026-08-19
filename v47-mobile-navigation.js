@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.16.0 — clean header menu + singular group filters */
+/* Jasper's Plant Room v4.16.1 — exact registered group filters */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -456,12 +456,7 @@
   }
   const speciesOf=p=>{const group=String(p?.group||'').trim().toLowerCase();return group.includes('anthurium')?'anthurium':group.includes('alocasia')?'alocasia':group.includes('philodendron')?'philodendron':'other';};
   const labelOf={anthurium:'Anthurium',alocasia:'Alocasia',philodendron:'Philodendron',other:'Others'};
-  function ensureSpeciesOption(group){
-    const select=document.getElementById('groupFilter');if(!select)return null;
-    const value=`__v415_species_${group}`;
-    if(![...select.options].some(option=>option.value===value))select.add(new Option(labelOf[group],value));
-    return value;
-  }
+  let combinedOther=false;
   function filterRenderedSpecies(group){
     const grid=document.getElementById('plantGrid');if(!grid)return;
     grid.querySelectorAll('.plant-card[data-id]').forEach(card=>{
@@ -473,19 +468,27 @@
   if(typeof renderPlants==='function'){
     const previousPlants=renderPlants;
     renderPlants=function(){
-      const select=document.getElementById('groupFilter'),value=select?.value||'',match=value.match(/^__v415_species_(.+)$/),group=match?.[1];
-      if(group)select.value='';
       const result=previousPlants.apply(this,arguments);
-      if(group){ensureSpeciesOption(group);select.value=value;filterRenderedSpecies(group);}
+      if(combinedOther)filterRenderedSpecies('other');
       return result;
     };
   }
   function openSpecies(group){
-    const value=ensureSpeciesOption(group),tab=document.querySelector('[data-view="plants"]');
-    if(!value||!tab)return;tab.click();
-    const select=document.getElementById('groupFilter');select.value=value;renderPlants();
+    const select=document.getElementById('groupFilter'),tab=document.querySelector('[data-view="plants"]');
+    if(!select||!tab)return;tab.click();
+    [...select.options].filter(option=>option.value.startsWith('__v415_species_')).forEach(option=>option.remove());
+    if(group==='other'){combinedOther=true;select.value='';}
+    else{
+      combinedOther=false;
+      const existing=[...select.options].find(option=>String(option.value).trim().toLowerCase()===group);
+      if(!existing)return;select.value=existing.value;
+    }
+    renderPlants();
     setTimeout(()=>document.getElementById('plantsView')?.scrollIntoView({behavior:'smooth',block:'start'}),20);
   }
+  const groupFilter=document.getElementById('groupFilter');
+  groupFilter?.querySelectorAll('option[value^="__v415_species_"]').forEach(option=>option.remove());
+  groupFilter?.addEventListener('input',()=>{combinedOther=false;},{capture:true});
   if(typeof renderStats==='function'){
     const previous=renderStats;renderStats=function(){const result=previous.apply(this,arguments);renderSpeciesCounters();return result;};
   }
@@ -494,7 +497,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.16.0';
+  const VERSION='v4.16.1';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
