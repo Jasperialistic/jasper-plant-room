@@ -1,13 +1,14 @@
-/* Jasper's Plant Room v4.14.1 — conservative PWA app shell */
-const CACHE_NAME='jasper-plant-room-shell-v4.14.1';
+/* Jasper's Plant Room v4.15.0 — conservative PWA app shell */
+const CACHE_NAME='jasper-plant-room-shell-v4.15.0';
+const MIGRATE_FROM='jasper-plant-room-shell-v4.14.1';
 const SHELL=[
   './',
   './manifest.webmanifest',
   './pwa-icon-192.png',
   './pwa-icon-512.png',
   './apple-touch-icon.png',
-  './v46-pwa-shell.js?v=4.6.0',
-  './v47-mobile-navigation.js?v=4.8.0',
+  './v46-pwa-shell.js?v=4.15.0',
+  './v47-mobile-navigation.js?v=4.15.0',
   './v25-photo-viewer.js?v=3.8.0',
   './v30-growth-gallery.js?v=3.0.0'
 ];
@@ -16,7 +17,8 @@ self.addEventListener('install',event=>{
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache=>cache.addAll(SHELL))
-      .then(()=>self.skipWaiting())
+      .then(()=>caches.has(MIGRATE_FROM))
+      .then(shouldMigrate=>{if(shouldMigrate)return self.skipWaiting();})
   );
 });
 
@@ -25,8 +27,6 @@ self.addEventListener('activate',event=>{
     caches.keys()
       .then(keys=>Promise.all(keys.filter(key=>key.startsWith('jasper-plant-room-shell-')&&key!==CACHE_NAME).map(key=>caches.delete(key))))
       .then(()=>self.clients.claim())
-      .then(()=>self.clients.matchAll({type:'window'}))
-      .then(windows=>Promise.all(windows.map(client=>client.navigate(client.url))))
   );
 });
 

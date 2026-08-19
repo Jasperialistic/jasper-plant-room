@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.14.1 — desktop dashboard quick care + group counters */
+/* Jasper's Plant Room v4.15.0 — dashboard filters, reliable image hold, update UX */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -414,7 +414,9 @@
 (function(){
   const css=`
 #v414SpeciesStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:-20px 0 30px}
-.v414-species-stat{min-width:0;padding:11px 12px;border:1px solid #294037;border-radius:14px;background:linear-gradient(145deg,#14251f,#101d19)}
+.v414-species-stat{min-width:0;padding:11px 12px;border:1px solid #294037;border-radius:14px;background:linear-gradient(145deg,#14251f,#101d19);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.v414-species-stat:hover{border-color:#557064;background:linear-gradient(145deg,#192d25,#12221c)}
+.v414-species-stat:focus-visible{outline:2px solid #d5be85;outline-offset:2px}
 .v414-species-stat strong{display:block;color:#e9f1ed;font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
 .v414-species-stat span{display:block;margin-top:6px;color:#8fa39a;font-size:10px;font-weight:780;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v414-species-stat[data-group="anthurium"]{border-color:#3b4b42}.v414-species-stat[data-group="anthurium"] strong{color:#d8c49a}
@@ -445,7 +447,44 @@
       else if(group.includes('philodendron'))counts.philodendron++;
       else counts.other++;
     });
-    row.innerHTML=`<div class="v414-species-stat" data-group="anthurium"><strong>${counts.anthurium}</strong><span>Anthuriums</span></div><div class="v414-species-stat" data-group="alocasia"><strong>${counts.alocasia}</strong><span>Alocasias</span></div><div class="v414-species-stat" data-group="philodendron"><strong>${counts.philodendron}</strong><span>Philodendrons</span></div><div class="v414-species-stat" data-group="other"><strong>${counts.other}</strong><span>Others</span></div>`;
+    row.innerHTML=`<div class="v414-species-stat" role="button" tabindex="0" data-group="anthurium"><strong>${counts.anthurium}</strong><span>Anthuriums</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="alocasia"><strong>${counts.alocasia}</strong><span>Alocasias</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="philodendron"><strong>${counts.philodendron}</strong><span>Philodendrons</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="other"><strong>${counts.other}</strong><span>Others</span></div>`;
+    row.querySelectorAll('.v414-species-stat').forEach(card=>{
+      card.setAttribute('aria-label',`View ${card.querySelector('span').textContent} in Plants`);
+      card.onclick=()=>openSpecies(card.dataset.group);
+      card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openSpecies(card.dataset.group);}};
+    });
+  }
+  const speciesOf=p=>{const group=String(p?.group||'').trim().toLowerCase();return group.includes('anthurium')?'anthurium':group.includes('alocasia')?'alocasia':group.includes('philodendron')?'philodendron':'other';};
+  const labelOf={anthurium:'Anthuriums',alocasia:'Alocasias',philodendron:'Philodendrons',other:'Others'};
+  function ensureSpeciesOption(group){
+    const select=document.getElementById('groupFilter');if(!select)return null;
+    const value=`__v415_species_${group}`;
+    if(![...select.options].some(option=>option.value===value))select.add(new Option(labelOf[group],value));
+    return value;
+  }
+  function filterRenderedSpecies(group){
+    const grid=document.getElementById('plantGrid');if(!grid)return;
+    grid.querySelectorAll('.plant-card[data-id]').forEach(card=>{
+      const plant=(db.plants||[]).find(p=>String(p.cloudId)===String(card.dataset.id));
+      if(speciesOf(plant)!==group)card.remove();
+    });
+    if(!grid.querySelector('.plant-card')&&!grid.querySelector('.empty'))grid.innerHTML=`<div class="empty">No ${labelOf[group].toLowerCase()} match the other filters.</div>`;
+  }
+  if(typeof renderPlants==='function'){
+    const previousPlants=renderPlants;
+    renderPlants=function(){
+      const select=document.getElementById('groupFilter'),value=select?.value||'',match=value.match(/^__v415_species_(.+)$/),group=match?.[1];
+      if(group)select.value='';
+      const result=previousPlants.apply(this,arguments);
+      if(group){ensureSpeciesOption(group);select.value=value;filterRenderedSpecies(group);}
+      return result;
+    };
+  }
+  function openSpecies(group){
+    const value=ensureSpeciesOption(group),tab=document.querySelector('[data-view="plants"]');
+    if(!value||!tab)return;tab.click();
+    const select=document.getElementById('groupFilter');select.value=value;renderPlants();
+    setTimeout(()=>document.getElementById('plantsView')?.scrollIntoView({behavior:'smooth',block:'start'}),20);
   }
   if(typeof renderStats==='function'){
     const previous=renderStats;renderStats=function(){const result=previous.apply(this,arguments);renderSpeciesCounters();return result;};
@@ -810,9 +849,10 @@
     stage.addEventListener('contextmenu',e=>{e.preventDefault();e.stopImmediatePropagation();},true);
     stage.addEventListener('touchstart',e=>{
       cancel();if(e.touches.length!==1||dlg.dataset.v410Zoomed==='1')return;
+      if(e.target===img)e.preventDefault();
       const t=e.touches[0];start={x:t.clientX,y:t.clientY};
       timer=setTimeout(()=>{timer=0;start=null;navigator.vibrate?.(18);openSheet(img.currentSrc||img.src);},520);
-    },{capture:true,passive:true});
+    },{capture:true,passive:false});
     stage.addEventListener('touchmove',e=>{
       if(!start||e.touches.length!==1){cancel();return;}
       const t=e.touches[0];if(Math.hypot(t.clientX-start.x,t.clientY-start.y)>9)cancel();
@@ -888,7 +928,7 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
     -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important
   }
   #photoLightboxImg,#growthViewImg{
-    -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:default!important;-webkit-user-drag:auto!important
+    -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;-webkit-user-drag:none!important
   }
   #photoLightboxShare,#growthViewShare,#photoLightbox .photo-lightbox-actions{display:none!important}
 }

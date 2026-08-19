@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.6.0 — installable mobile app shell */
+/* Jasper's Plant Room v4.15.0 — installable shell + visible update prompt */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
   let deferredInstallPrompt=null;
@@ -25,6 +25,10 @@
 #pwaInstallGuide ol{margin:0;padding-left:20px;color:#dce7e1;font-size:13px;line-height:1.7}
 #pwaInstallGuide .pwa-guide-actions{display:flex;justify-content:flex-end;padding:11px 14px;border-top:1px solid #263b33;background:#0d1814}
 #pwaInstallGuide button{min-height:42px;padding:0 15px;border:1px solid #d5be85;border-radius:11px;background:#d5be85;color:#152017;font-weight:850}
+#pwaUpdateReady{position:fixed;z-index:2147483000;left:50%;bottom:max(18px,calc(env(safe-area-inset-bottom) + 14px));display:flex;align-items:center;gap:12px;width:min(430px,calc(100vw - 24px));padding:11px 12px 11px 15px;border:1px solid #557064;border-radius:15px;background:rgba(18,35,29,.97);box-shadow:0 18px 48px rgba(0,0,0,.5);transform:translateX(-50%);color:#edf4f0}
+body.v47-mobile-nav-ready #pwaUpdateReady{bottom:max(94px,calc(env(safe-area-inset-bottom) + 90px))}
+#pwaUpdateReady span{flex:1;min-width:0;font-size:13px;font-weight:780}
+#pwaUpdateReady button{min-height:38px;padding:0 13px;border:1px solid #d5be85;border-radius:10px;background:#d5be85;color:#152017;font-size:12px;font-weight:850}
 `;
   document.getElementById(style.id)?.remove();
   document.head.appendChild(style);
@@ -106,7 +110,22 @@
 
   if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
     window.addEventListener('load',()=>{
-      navigator.serviceWorker.register('./service-worker.js',{scope:'./',updateViaCache:'none'}).catch(err=>console.warn('Plant Room service worker:',err));
+      let refreshing=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload();});
+      const showUpdate=worker=>{
+        if(!worker)return;
+        let bar=document.getElementById('pwaUpdateReady');
+        if(!bar){bar=document.createElement('div');bar.id='pwaUpdateReady';bar.setAttribute('role','status');bar.innerHTML='<span>Update ready</span><button type="button">Reload</button>';document.body.appendChild(bar);}
+        bar.querySelector('button').onclick=()=>{bar.querySelector('button').disabled=true;bar.querySelector('button').textContent='Updating…';worker.postMessage('SKIP_WAITING');};
+      };
+      navigator.serviceWorker.register('./service-worker.js',{scope:'./',updateViaCache:'none'}).then(reg=>{
+        if(reg.waiting&&navigator.serviceWorker.controller)showUpdate(reg.waiting);
+        reg.addEventListener('updatefound',()=>{
+          const worker=reg.installing;if(!worker)return;
+          worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdate(worker);});
+        });
+        reg.update().catch(()=>{});
+      }).catch(err=>console.warn('Plant Room service worker:',err));
     },{once:true});
   }
 
