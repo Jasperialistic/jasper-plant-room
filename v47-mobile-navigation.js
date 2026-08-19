@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.15.0 — dashboard filters, reliable image hold, update UX */
+/* Jasper's Plant Room v4.16.0 — clean header menu + singular group filters */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -447,7 +447,7 @@
       else if(group.includes('philodendron'))counts.philodendron++;
       else counts.other++;
     });
-    row.innerHTML=`<div class="v414-species-stat" role="button" tabindex="0" data-group="anthurium"><strong>${counts.anthurium}</strong><span>Anthuriums</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="alocasia"><strong>${counts.alocasia}</strong><span>Alocasias</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="philodendron"><strong>${counts.philodendron}</strong><span>Philodendrons</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="other"><strong>${counts.other}</strong><span>Others</span></div>`;
+    row.innerHTML=`<div class="v414-species-stat" role="button" tabindex="0" data-group="anthurium"><strong>${counts.anthurium}</strong><span>Anthurium</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="alocasia"><strong>${counts.alocasia}</strong><span>Alocasia</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="philodendron"><strong>${counts.philodendron}</strong><span>Philodendron</span></div><div class="v414-species-stat" role="button" tabindex="0" data-group="other"><strong>${counts.other}</strong><span>Others</span></div>`;
     row.querySelectorAll('.v414-species-stat').forEach(card=>{
       card.setAttribute('aria-label',`View ${card.querySelector('span').textContent} in Plants`);
       card.onclick=()=>openSpecies(card.dataset.group);
@@ -455,7 +455,7 @@
     });
   }
   const speciesOf=p=>{const group=String(p?.group||'').trim().toLowerCase();return group.includes('anthurium')?'anthurium':group.includes('alocasia')?'alocasia':group.includes('philodendron')?'philodendron':'other';};
-  const labelOf={anthurium:'Anthuriums',alocasia:'Alocasias',philodendron:'Philodendrons',other:'Others'};
+  const labelOf={anthurium:'Anthurium',alocasia:'Alocasia',philodendron:'Philodendron',other:'Others'};
   function ensureSpeciesOption(group){
     const select=document.getElementById('groupFilter');if(!select)return null;
     const value=`__v415_species_${group}`;
@@ -490,6 +490,51 @@
     const previous=renderStats;renderStats=function(){const result=previous.apply(this,arguments);renderSpeciesCounters();return result;};
   }
   renderSpeciesCounters();
+})();
+
+/* Header: compact version label and account / backup dropdown. */
+(function(){
+  const VERSION='v4.16.0';
+  const css=`
+.top-actions{align-items:center}
+#v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
+#v416HeaderMenu{position:relative;flex:0 0 auto}
+#v416HeaderMenuButton{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid #334d42;border-radius:12px;background:#172820;color:#edf4f0;font-size:24px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#v416HeaderMenuButton:hover,#v416HeaderMenuButton[aria-expanded="true"]{background:#20362d;border-color:#526d61}
+#v416HeaderMenuPanel{position:absolute;z-index:2147483100;top:calc(100% + 9px);right:0;width:210px;padding:7px;border:1px solid #365045;border-radius:14px;background:#12211c;box-shadow:0 18px 48px rgba(0,0,0,.5)}
+#v416HeaderMenuPanel[hidden]{display:none!important}
+#v416HeaderMenuPanel .v416-menu-heading{padding:7px 9px 6px;color:#70857b;font-size:9px;font-weight:850;letter-spacing:.13em;text-transform:uppercase}
+#v416HeaderMenuPanel>.ghost,#v416HeaderMenuPanel>.file-label{display:flex;width:100%;min-height:42px;align-items:center;box-sizing:border-box;margin:0;padding:0 10px;border:0;border-radius:9px;background:transparent;color:#dce7e1;font-size:12px;text-align:left;cursor:pointer}
+body.owner-mode #v416HeaderMenuPanel>.admin-only{display:flex!important}
+body:not(.owner-mode) #v416HeaderMenuPanel>.admin-only{display:none!important}
+#v416HeaderMenuPanel>#adminLoginBtn{display:flex}
+#v416HeaderMenuPanel>.ghost:hover,#v416HeaderMenuPanel>.file-label:hover{background:#1d322a}
+#v416HeaderMenuPanel #signOutBtn{color:#efb0b0}
+@media(max-width:700px){
+  #v416Version{padding:4px 6px;font-size:8.5px}
+  #v416HeaderMenuButton{width:40px;height:40px}
+  #v416HeaderMenuPanel{position:fixed;top:max(68px,calc(env(safe-area-inset-top) + 58px));right:max(10px,env(safe-area-inset-right));width:min(230px,calc(100vw - 20px))}
+}
+`;
+  const style=document.createElement('style');style.id='v416HeaderMenuStyles';style.textContent=css;document.head.appendChild(style);
+  function init(){
+    const host=document.querySelector('.top-actions');if(!host||document.getElementById('v416HeaderMenu'))return;
+    const version=document.createElement('span');version.id='v416Version';version.textContent=VERSION;version.setAttribute('aria-label',`Plant Room version ${VERSION.slice(1)}`);
+    const menu=document.createElement('div');menu.id='v416HeaderMenu';
+    menu.innerHTML='<button type="button" id="v416HeaderMenuButton" aria-label="Account and backup menu" aria-expanded="false">⋮</button><div id="v416HeaderMenuPanel" role="menu" hidden><div class="v416-menu-heading">Account & backup</div></div>';
+    host.append(version,menu);
+    const panel=menu.querySelector('#v416HeaderMenuPanel'),button=menu.querySelector('#v416HeaderMenuButton');
+    ['exportBtn','importLabel','signOutBtn','adminLoginBtn'].forEach(id=>{const item=document.getElementById(id);if(item)panel.appendChild(item);});
+    const close=()=>{panel.hidden=true;button.setAttribute('aria-expanded','false');};
+    const toggle=()=>{const opening=panel.hidden;panel.hidden=!opening;button.setAttribute('aria-expanded',String(opening));};
+    button.onclick=e=>{e.stopPropagation();toggle();};
+    panel.addEventListener('click',e=>e.stopPropagation());
+    ['exportBtn','signOutBtn','adminLoginBtn'].forEach(id=>document.getElementById(id)?.addEventListener('click',close));
+    document.getElementById('importInput')?.addEventListener('change',close);
+    document.addEventListener('click',close);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 
 /* Mobile plant profile: back button + interactive swipe from the left edge. */
