@@ -1,4 +1,4 @@
-name: Plant Room v3.6.1 AI visual review reuse
+name: Plant Room v3.7 ChatGPT visual evidence bridge
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Check out site
         uses: actions/checkout@v4
 
-      - name: Patch v3.6.1 AI review reuse
+      - name: Patch v3.7 visual evidence bridge
         shell: python
         run: |
           import re
@@ -24,34 +24,34 @@ jobs:
 
           page=Path('index.html')
           text=page.read_text(encoding='utf-8')
-          old_marker='Cloud build v3.6: AI visual review'
-          new_marker='Cloud build v3.6.1: AI review reuse'
-          old_v36='<script src="v36-ai-review.js?v=3.6.0"></script>'
-          new_v36='<script src="v36-ai-review.js?v=3.6.1"></script>'
+          old_marker='Cloud build v3.6.1: AI review reuse'
+          new_marker='Cloud build v3.7: ChatGPT visual evidence bridge'
+          old_v36='<script src="v36-ai-review.js?v=3.6.1"></script>'
+          new_v36='<script src="v36-ai-review.js?v=3.7.0"></script>'
           changed=False
 
           if new_marker not in text:
               if old_marker not in text:
-                  raise SystemExit('Expected v3.6 build marker not found')
+                  raise SystemExit('Expected v3.6.1 build marker not found')
               text=text.replace(old_marker,new_marker,1)
               changed=True
 
           if new_v36 not in text:
               if old_v36 not in text:
-                  raise SystemExit('Expected v3.6 AI script hook not found')
+                  raise SystemExit('Expected v3.6.1 AI script hook not found')
               text=text.replace(old_v36,new_v36,1)
               changed=True
 
-          required=['function openPlant(','v35-telegram-reference-packet.js?v=3.5.0','v36-ai-review.js?v=3.6.1']
+          required=['function openPlant(','v35-telegram-reference-packet.js?v=3.5.0','v36-ai-review.js?v=3.7.0']
           missing=[x for x in required if x not in text]
           if missing:
-              raise SystemExit('Missing AI review reuse markers: '+', '.join(missing))
+              raise SystemExit('Missing v3.7 visual evidence markers: '+', '.join(missing))
 
           if changed:
               page.write_text(text,encoding='utf-8')
-              print('v3.6.1 AI review reuse installed')
+              print('v3.7 ChatGPT visual evidence bridge installed')
           else:
-              print('v3.6.1 already installed')
+              print('v3.7 already installed')
 
           scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',text,flags=re.S)
           if scripts:
@@ -80,6 +80,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No site changes to commit"
           else
-            git commit -m "Reuse unchanged AI plant reviews"
+            git commit -m "Enable ChatGPT visual evidence bridge"
             git push
           fi
