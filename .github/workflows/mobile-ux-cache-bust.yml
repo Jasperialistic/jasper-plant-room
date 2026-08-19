@@ -8,6 +8,7 @@ on:
       - 'v37-mobile-plant-screen.js'
       - 'v38-full-plant-editor.js'
       - 'v39-editor-polish.js'
+      - 'v40-editor-access-tweaks.js'
       - '.github/workflows/mobile-ux-cache-bust.yml'
 
 permissions:
@@ -77,6 +78,16 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v39-editor-polish.js after full plant editor')
 
+          access_tag = '<script src="v40-editor-access-tweaks.js?v=4.2.1"></script>'
+          access_pattern = r'<script src="v40-editor-access-tweaks\.js(?:\?v=[^"\']*)?"></script>'
+          if re.search(access_pattern, s2):
+              s2 = re.sub(access_pattern, access_tag, s2, count=1)
+          else:
+              polish_exact = r'(<script src="v39-editor-polish\.js\?v=4\.2\.0"></script>)'
+              s2, inserted = re.subn(polish_exact, r'\1\n  ' + access_tag, s2, count=1)
+              if inserted == 0:
+                  raise SystemExit('Could not place v40 editor access tweaks')
+
           p.write_text(s2, encoding='utf-8')
       - name: Commit mobile asset loader
         shell: bash
@@ -89,5 +100,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Load editor polish v4.2.0'
+          git commit -m 'Load editor access tweaks v4.2.1'
           git push
