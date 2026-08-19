@@ -133,7 +133,7 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v44 Add Plant presets layer')
 
-          link_tag = '<script src="v45-location-light-link.js?v=4.5.0"></script>'
+          link_tag = '<script src="v45-location-light-link.js?v=4.5.1"></script>'
           link_pattern = r'<script src="v45-location-light-link\.js(?:\?v=[^"\']*)?"></script>'
           if re.search(link_pattern, s2):
               s2 = re.sub(link_pattern, link_tag, s2, count=1)
@@ -155,5 +155,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Load location-light link v4.5.0'
+          git commit -m 'Load location-light stars v4.5.1'
           git push
