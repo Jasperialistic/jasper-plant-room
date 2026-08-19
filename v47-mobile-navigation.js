@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.12.1 — native image hold + sticky tabbed profiles */
+/* Jasper's Plant Room v4.13.0 — dashboard care actions + controlled image hold */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -703,6 +703,129 @@
   dlg.addEventListener('close',()=>{queued=false;});
   if(typeof mq.addEventListener==='function')mq.addEventListener('change',schedule);
   schedule();
+})();
+
+/* Reliable long-hold image actions: avoid Safari text-selection menus. */
+(function(){
+  const css=`
+@media(max-width:700px){
+  #v413ImageActions{width:100%;max-width:none;margin:auto 0 0;padding:0;border:0;background:transparent;color:#edf4f0}
+  #v413ImageActions::backdrop{background:rgba(0,0,0,.68);backdrop-filter:blur(3px)}
+  #v413ImageActions .v413-image-sheet{box-sizing:border-box;width:100%;padding:9px 12px max(14px,env(safe-area-inset-bottom));border:1px solid #30483e;border-bottom:0;border-radius:23px 23px 0 0;background:#13221d;box-shadow:0 -18px 46px rgba(0,0,0,.45)}
+  #v413ImageActions .v413-image-grab{width:40px;height:4px;margin:2px auto 13px;border-radius:99px;background:#4b6259}
+  #v413ImageActions .v413-image-title{padding:0 5px 11px}
+  #v413ImageActions .v413-image-title strong{display:block;font-size:16px}
+  #v413ImageActions .v413-image-title span{display:block;margin-top:3px;color:#8fa39a;font-size:11px}
+  #v413ImageActions .v413-image-action{width:100%;min-height:51px;margin:0 0 7px;padding:0 14px;border:1px solid #304b3f;border-radius:13px;background:#1a2d26;color:#edf4f0;text-align:left;font-size:14px;font-weight:760}
+  #v413ImageActions .v413-image-action:disabled{opacity:.55}
+  #v413ImageActions .v413-image-cancel{text-align:center;color:#a9bbb3;background:#101b17}
+}
+`;
+  const style=document.createElement('style');style.id='v413ImageActionStyles';style.textContent=css;document.head.appendChild(style);
+  let source='';
+  function ensureSheet(){
+    let dlg=document.getElementById('v413ImageActions');if(dlg)return dlg;
+    dlg=document.createElement('dialog');dlg.id='v413ImageActions';dlg.setAttribute('aria-label','Image actions');
+    dlg.innerHTML='<div class="v413-image-sheet"><div class="v413-image-grab"></div><div class="v413-image-title"><strong>Photo actions</strong><span>Save, share or copy this original image.</span></div><button type="button" class="v413-image-action" id="v413ImageSave">Save / Share image</button><button type="button" class="v413-image-action" id="v413ImageCopy">Copy image</button><button type="button" class="v413-image-action v413-image-cancel" id="v413ImageCancel">Cancel</button></div>';
+    document.body.appendChild(dlg);
+    dlg.querySelector('#v413ImageCancel').onclick=()=>dlg.close();
+    dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close();});
+    dlg.addEventListener('cancel',e=>{e.preventDefault();dlg.close();});
+    dlg.querySelector('#v413ImageSave').onclick=async()=>{
+      const btn=dlg.querySelector('#v413ImageSave');btn.disabled=true;btn.textContent='Preparing image…';
+      try{if(typeof window.plantShareOrSaveImage==='function')await window.plantShareOrSaveImage(source,'plant-photo');}
+      finally{btn.disabled=false;btn.textContent='Save / Share image';}
+    };
+    dlg.querySelector('#v413ImageCopy').onclick=async()=>{
+      const btn=dlg.querySelector('#v413ImageCopy');btn.disabled=true;btn.textContent='Copying image…';
+      try{
+        const response=await fetch(source,{mode:'cors'});if(!response.ok)throw new Error('Image download failed');
+        const blob=await response.blob();
+        if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined')throw new Error('Image copying is unavailable in this browser');
+        let copyBlob=blob;
+        if(blob.type!=='image/png'){
+          const bitmap=await createImageBitmap(blob),canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
+          const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);bitmap.close?.();
+          copyBlob=await new Promise((resolve,reject)=>canvas.toBlob(x=>x?resolve(x):reject(new Error('Could not convert image')),'image/png'));
+        }
+        await navigator.clipboard.write([new ClipboardItem({'image/png':copyBlob})]);
+        btn.textContent='Copied';setTimeout(()=>{btn.textContent='Copy image';btn.disabled=false;},900);return;
+      }catch(error){
+        console.warn('Copy image failed',error);alert('Safari could not copy this image directly. Use Save / Share image instead.');
+      }
+      btn.disabled=false;btn.textContent='Copy image';
+    };
+    return dlg;
+  }
+  function openSheet(src){source=src||'';if(!source)return;const dlg=ensureSheet();if(!dlg.open)dlg.showModal();}
+  function enhance(dlg){
+    if(!dlg||dlg.dataset.v413ImageHold==='1')return;
+    const stage=dlg.querySelector('#photoLightboxStage,#growthViewStage'),img=dlg.querySelector('#photoLightboxImg,#growthViewImg');
+    if(!stage||!img)return;dlg.dataset.v413ImageHold='1';
+    let timer=0,start=null;
+    const cancel=()=>{clearTimeout(timer);timer=0;start=null;};
+    stage.addEventListener('contextmenu',e=>{e.preventDefault();e.stopImmediatePropagation();},true);
+    stage.addEventListener('touchstart',e=>{
+      cancel();if(e.touches.length!==1||dlg.dataset.v410Zoomed==='1')return;
+      const t=e.touches[0];start={x:t.clientX,y:t.clientY};
+      timer=setTimeout(()=>{timer=0;start=null;navigator.vibrate?.(18);openSheet(img.currentSrc||img.src);},520);
+    },{capture:true,passive:true});
+    stage.addEventListener('touchmove',e=>{
+      if(!start||e.touches.length!==1){cancel();return;}
+      const t=e.touches[0];if(Math.hypot(t.clientX-start.x,t.clientY-start.y)>9)cancel();
+    },{capture:true,passive:true});
+    stage.addEventListener('touchend',cancel,{capture:true,passive:true});
+    stage.addEventListener('touchcancel',cancel,{capture:true,passive:true});
+    dlg.addEventListener('close',cancel);
+  }
+  const scan=()=>{enhance(document.getElementById('photoLightbox'));enhance(document.getElementById('growthPhotoViewer'));};
+  scan();new MutationObserver(scan).observe(document.body,{childList:true});
+})();
+
+/* Dashboard: one-tap care actions on each owner check-queue card. */
+(function(){
+  const css=`
+body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px minmax(0,1fr) auto;cursor:default}
+#queue .v413-care-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr .72fr;gap:7px;padding-top:9px;border-top:1px solid #263c33}
+#queue .v413-care-action{min-height:43px;padding:0 8px;border:1px solid #345044;border-radius:11px;background:#192d25;color:#e9f1ed;font-size:12px;font-weight:800}
+#queue .v413-care-action[data-v413-care="water"]{border-color:#d5be85;background:#d5be85;color:#152017}
+#queue .v413-care-action:disabled{opacity:.55}
+@media(max-width:700px){
+  body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:52px minmax(0,1fr) auto;gap:10px;padding:10px}
+  #queue .v413-care-actions{gap:5px;padding-top:8px}
+  #queue .v413-care-action{min-height:46px;padding:0 5px;font-size:10.5px}
+}
+`;
+  const style=document.createElement('style');style.id='v413DashboardCareStyles';style.textContent=css;document.head.appendChild(style);
+  async function runCare(card,p,type,button){
+    if(!p||typeof addCare!=='function')return;
+    if(type==='custom'){if(typeof openLogDialog==='function')openLogDialog(p.cloudId);return;}
+    const today=isoToday();let action='',next=null;
+    if(type==='moist'){action='Checked — still moist';next=addDays(today,1);}
+    if(type==='water'){action='Watered';next=p.checkDays?addDays(today,p.checkDays):null;}
+    const buttons=card.querySelectorAll('.v413-care-action');buttons.forEach(x=>x.disabled=true);button.textContent='Saving…';
+    try{await addCare(p,action,'',next);}
+    catch(error){console.error('Dashboard care action failed',error);alert(error?.message||'Could not save this care entry.');buttons.forEach(x=>x.disabled=false);button.textContent=type==='water'?'Watered':'Still moist';}
+  }
+  function enhanceQueue(){
+    if(!document.body.classList.contains('owner-mode')||typeof db==='undefined')return;
+    document.querySelectorAll('#queue .queue-item[data-id]').forEach(card=>{
+      if(card.dataset.v413Care==='1')return;
+      const p=(db.plants||[]).find(x=>String(x.cloudId)===String(card.dataset.id));if(!p)return;
+      card.dataset.v413Care='1';card.classList.add('v413-care-ready');
+      const actions=document.createElement('div');actions.className='v413-care-actions';
+      actions.innerHTML='<button type="button" class="v413-care-action" data-v413-care="moist">Still moist</button><button type="button" class="v413-care-action" data-v413-care="water">Watered</button><button type="button" class="v413-care-action" data-v413-care="custom">Custom</button>';
+      actions.querySelectorAll('button').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();runCare(card,p,button.dataset.v413Care,button);}));
+      card.appendChild(actions);
+      card.querySelector('.queue-thumb')?.addEventListener('click',e=>{e.stopPropagation();openPlant(p.cloudId);});
+      card.querySelector('.queue-main')?.addEventListener('click',e=>{e.stopPropagation();openPlant(p.cloudId);});
+    });
+  }
+  if(typeof renderQueue==='function'){
+    const previous=renderQueue;renderQueue=function(){const result=previous.apply(this,arguments);enhanceQueue();return result;};
+  }
+  const observer=new MutationObserver(()=>requestAnimationFrame(enhanceQueue));observer.observe(document.getElementById('queue'),{childList:true});
+  enhanceQueue();
 })();
 
 /* Enlarged gallery and growth photos: pinch zoom and one-finger pan. */

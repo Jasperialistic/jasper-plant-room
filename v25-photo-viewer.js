@@ -84,6 +84,7 @@
       window.open(src,'_blank','noopener,noreferrer');
     }
   }
+  window.plantShareOrSaveImage=shareOrSaveImage;
 
   function currentPlantFilename(prefix){
     const name=(document.getElementById('photoLightboxPlant')?.textContent||document.getElementById('growthViewPlant')?.textContent||'plant').trim();

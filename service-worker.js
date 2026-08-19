@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.12.1 — conservative PWA app shell */
-const CACHE_NAME='jasper-plant-room-shell-v4.12.1';
+/* Jasper's Plant Room v4.13.0 — conservative PWA app shell */
+const CACHE_NAME='jasper-plant-room-shell-v4.13.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
