@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.16.1 — conservative PWA app shell */
-const CACHE_NAME='jasper-plant-room-shell-v4.16.1';
+/* Jasper's Plant Room v4.16.2 — conservative PWA app shell */
+const CACHE_NAME='jasper-plant-room-shell-v4.16.2';
 const MIGRATE_FROM='jasper-plant-room-shell-v4.14.1';
 const SHELL=[
   './',
@@ -8,7 +8,7 @@ const SHELL=[
   './pwa-icon-512.png',
   './apple-touch-icon.png',
   './v46-pwa-shell.js?v=4.15.0',
-  './v47-mobile-navigation.js?v=4.16.1',
+  './v47-mobile-navigation.js?v=4.16.2',
   './v25-photo-viewer.js?v=3.8.0',
   './v30-growth-gallery.js?v=3.0.0'
 ];
@@ -57,7 +57,7 @@ self.addEventListener('fetch',event=>{
   if(/\.(?:js|css|png|jpg|jpeg|svg|webp|ico|webmanifest)$/i.test(url.pathname)){
     event.respondWith((async()=>{
       const cached=await caches.match(req);
-      const network=fetch(req).then(response=>{
+      const network=fetch(req,{cache:'reload'}).then(response=>{
         if(response&&response.ok){
           const copy=response.clone();
           caches.open(CACHE_NAME).then(cache=>cache.put(req,copy));
