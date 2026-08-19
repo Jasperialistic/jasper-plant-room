@@ -5,6 +5,7 @@ on:
     paths:
       - 'v25-photo-viewer.js'
       - 'v36-mobile-gallery.js'
+      - '.github/workflows/mobile-ux-cache-bust.yml'
 
 permissions:
   contents: write
