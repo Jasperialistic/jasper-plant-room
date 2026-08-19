@@ -122,7 +122,7 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v43 desktop gallery modal menu')
 
-          presets_tag = '<script src="v44-add-plant-presets-light.js?v=4.4.0"></script>'
+          presets_tag = '<script src="v44-add-plant-presets-light.js?v=4.4.1"></script>'
           presets_pattern = r'<script src="v44-add-plant-presets-light\.js(?:\?v=[^"\']*)?"></script>'
           if re.search(presets_pattern, s2):
               s2 = re.sub(presets_pattern, presets_tag, s2, count=1)
@@ -144,5 +144,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Load Add Plant presets v4.4.0'
+          git commit -m 'Load Add Plant presets v4.4.1'
           git push
