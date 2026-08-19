@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.14.0 — dashboard collection group counters */
+/* Jasper's Plant Room v4.14.1 — desktop dashboard quick care + group counters */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -419,6 +419,12 @@
 .v414-species-stat span{display:block;margin-top:6px;color:#8fa39a;font-size:10px;font-weight:780;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v414-species-stat[data-group="anthurium"]{border-color:#3b4b42}.v414-species-stat[data-group="anthurium"] strong{color:#d8c49a}
 .v414-species-stat[data-group="alocasia"] strong{color:#a8cdb9}.v414-species-stat[data-group="philodendron"] strong{color:#b6c9a4}
+@media(min-width:701px){
+  #v414SpeciesStats{gap:8px;margin:-22px 0 30px}
+  .v414-species-stat{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:12px}
+  .v414-species-stat strong{font-size:18px}
+  .v414-species-stat span{margin:0;font-size:10px}
+}
 @media(max-width:700px){
   #v414SpeciesStats{gap:5px;margin:-23px 0 24px}
   .v414-species-stat{padding:10px 7px;border-radius:12px;text-align:center}
@@ -827,6 +833,10 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
 #queue .v413-care-action{min-height:43px;padding:0 8px;border:1px solid #345044;border-radius:11px;background:#192d25;color:#e9f1ed;font-size:12px;font-weight:800}
 #queue .v413-care-action[data-v413-care="water"]{border-color:#d5be85;background:#d5be85;color:#152017}
 #queue .v413-care-action:disabled{opacity:.55}
+@media(min-width:701px){
+  #queue .v413-care-actions{grid-column:2/-1;grid-template-columns:repeat(3,minmax(92px,126px));justify-content:end;gap:6px;padding-top:8px}
+  #queue .v413-care-action{min-height:36px;border-radius:9px;font-size:11px}
+}
 @media(max-width:700px){
   body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:52px minmax(0,1fr) auto;gap:10px;padding:10px}
   #queue .v413-care-actions{gap:5px;padding-top:8px}
