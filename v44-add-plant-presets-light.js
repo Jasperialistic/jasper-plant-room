@@ -1,6 +1,7 @@
-/* Jasper's Plant Room v4.4 — Add Plant presets + shared PPFD light presets */
+/* Jasper's Plant Room v4.4.1 — Add Plant presets + shared PPFD light presets, render-loop fix */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
+  let syncQueued=false;
 
   const LIGHT_PRESETS=[
     'Too dim · under 40 µmol/m²/s PPFD',
@@ -74,19 +75,21 @@
     select.innerHTML='<option value="">Presets…</option>'+options.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
     select.addEventListener('change',()=>{
       if(!select.value)return;
-      input.value=select.value;
+      const chosen=select.value;
+      select.value='';
+      input.value=chosen;
       input.dispatchEvent(new Event('input',{bubbles:true}));
       input.dispatchEvent(new Event('change',{bubbles:true}));
       input.focus({preventScroll:true});
-      select.value='';
     });
     row.appendChild(select);
   }
 
   function syncPresetLabels(){
+    const desired=mobileMq.matches?'⌄':'Presets…';
     document.querySelectorAll('.v44-preset-select').forEach(select=>{
       const first=select.options?.[0];
-      if(first)first.textContent=mobileMq.matches?'⌄':'Presets…';
+      if(first && first.textContent!==desired)first.textContent=desired;
     });
   }
 
@@ -134,12 +137,17 @@
     }
   }
 
+  function runSync(){
+    syncQueued=false;
+    enhanceAddPlant();
+    enhanceEditLight();
+    syncPresetLabels();
+  }
+
   function sync(){
-    requestAnimationFrame(()=>{
-      enhanceAddPlant();
-      enhanceEditLight();
-      syncPresetLabels();
-    });
+    if(syncQueued)return;
+    syncQueued=true;
+    requestAnimationFrame(runSync);
   }
 
   sync();
