@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.9.6 — consumed photo scroll state + unified navigation cleanup */
+/* Jasper's Plant Room v4.10.0 — pinch zoom + two-level mobile navigation */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -536,6 +536,7 @@
     let gesture=null;
     dlg.addEventListener('touchstart',e=>{
       if(!dlg.open||e.touches.length!==1)return;
+      if(dlg.dataset.v410Zoomed==='1'||dlg.dataset.v410Pinching==='1')return;
       const t=e.touches[0];if(t.clientX>56)return;
       gesture={startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastTime:performance.now(),dx:0,locked:null};
     },{capture:true,passive:true});
@@ -550,6 +551,7 @@
     },{capture:true,passive:false});
     dlg.addEventListener('touchend',e=>{
       if(!gesture)return;
+      if(dlg.dataset.v410Pinching==='1'){gesture=null;return;}
       const active=gesture.locked==='back',t=e.changedTouches[0],finalX=t?.clientX??gesture.lastX;
       const dx=Math.max(gesture.dx,finalX-gesture.startX),elapsed=Math.max(1,performance.now()-gesture.lastTime),velocity=(finalX-gesture.lastX)/elapsed;
       gesture=null;if(!active)return;
@@ -575,6 +577,92 @@
         document.body.style.overflow='';
       });
     },true);
+  }
+  const scan=()=>{enhance(document.getElementById('photoLightbox'));enhance(document.getElementById('growthPhotoViewer'));};
+  scan();new MutationObserver(scan).observe(document.body,{childList:true});
+})();
+
+/* Enlarged gallery and growth photos: pinch zoom and one-finger pan. */
+(function(){
+  const css=`
+@media(max-width:700px){
+  #photoLightboxImg,#growthViewImg{transform:translate3d(var(--v410-pan-x,0px),var(--v410-pan-y,0px),0) scale(var(--v410-scale,1));transform-origin:center center;will-change:transform}
+  #photoLightbox.v410-zoom-resetting #photoLightboxImg,#growthPhotoViewer.v410-zoom-resetting #growthViewImg{transition:transform 160ms ease-out}
+  #photoLightbox.v410-zoomed .photo-lightbox-stage,#growthPhotoViewer.v410-zoomed .growth-view-stage{touch-action:none;cursor:grab}
+  #photoLightbox.v410-zoomed .photo-lightbox-img,#growthPhotoViewer.v410-zoomed .growth-view-img{cursor:grab}
+  #photoLightbox.v410-zoom-panning .photo-lightbox-img,#growthPhotoViewer.v410-zoom-panning .growth-view-img{cursor:grabbing}
+}
+`;
+  const style=document.createElement('style');
+  style.id='v410PhotoZoomStyles';style.textContent=css;document.head.appendChild(style);
+  const distance=(a,b)=>Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);
+  const midpoint=(a,b)=>({x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2});
+  const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
+
+  function enhance(dlg){
+    if(!dlg||dlg.dataset.v410Zoom==='1')return;
+    const stage=dlg.querySelector('#photoLightboxStage,#growthViewStage');
+    const img=dlg.querySelector('#photoLightboxImg,#growthViewImg');
+    if(!stage||!img)return;
+    dlg.dataset.v410Zoom='1';
+    let scale=1,panX=0,panY=0,gesture=null,resetTimer=0;
+    const apply=()=>{
+      img.style.setProperty('--v410-scale',String(scale));
+      img.style.setProperty('--v410-pan-x',`${panX}px`);img.style.setProperty('--v410-pan-y',`${panY}px`);
+      const zoomed=scale>1.01;
+      dlg.dataset.v410Zoomed=zoomed?'1':'0';dlg.classList.toggle('v410-zoomed',zoomed);
+    };
+    const reset=(animate=false)=>{
+      clearTimeout(resetTimer);gesture=null;delete dlg.dataset.v410Pinching;scale=1;panX=0;panY=0;
+      dlg.classList.remove('v410-zoom-panning');dlg.classList.toggle('v410-zoom-resetting',animate);
+      apply();
+      if(animate)resetTimer=setTimeout(()=>dlg.classList.remove('v410-zoom-resetting'),170);
+      else dlg.classList.remove('v410-zoom-resetting');
+    };
+    const maxPan=()=>{
+      const rect=stage.getBoundingClientRect();
+      return {x:Math.max(0,rect.width*(scale-1)/2),y:Math.max(0,rect.height*(scale-1)/2)};
+    };
+    const containPan=()=>{
+      const max=maxPan();panX=clamp(panX,-max.x,max.x);panY=clamp(panY,-max.y,max.y);
+    };
+
+    stage.addEventListener('touchstart',e=>{
+      if(e.touches.length===2){
+        e.preventDefault();e.stopImmediatePropagation();clearTimeout(resetTimer);dlg.classList.remove('v410-zoom-resetting');
+        dlg.dataset.v410Pinching='1';
+        const mid=midpoint(e.touches[0],e.touches[1]);
+        gesture={type:'pinch',distance:distance(e.touches[0],e.touches[1]),scale,panX,panY,midX:mid.x,midY:mid.y};
+      }else if(e.touches.length===1&&scale>1.01){
+        e.preventDefault();e.stopImmediatePropagation();
+        gesture={type:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,panX,panY};dlg.classList.add('v410-zoom-panning');
+      }
+    },{capture:true,passive:false});
+    stage.addEventListener('touchmove',e=>{
+      if(!gesture)return;
+      if(gesture.type==='pinch'&&e.touches.length>=2){
+        e.preventDefault();e.stopImmediatePropagation();
+        const mid=midpoint(e.touches[0],e.touches[1]);
+        scale=clamp(gesture.scale*distance(e.touches[0],e.touches[1])/Math.max(1,gesture.distance),1,5);
+        panX=gesture.panX+(mid.x-gesture.midX);panY=gesture.panY+(mid.y-gesture.midY);containPan();apply();
+      }else if(gesture.type==='pan'&&e.touches.length===1){
+        e.preventDefault();e.stopImmediatePropagation();
+        panX=gesture.panX+e.touches[0].clientX-gesture.x;panY=gesture.panY+e.touches[0].clientY-gesture.y;containPan();apply();
+      }
+    },{capture:true,passive:false});
+    stage.addEventListener('touchend',e=>{
+      if(!gesture)return;
+      e.preventDefault();e.stopImmediatePropagation();dlg.classList.remove('v410-zoom-panning');
+      if(e.touches.length===1&&scale>1.01){
+        gesture={type:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY,panX,panY};
+      }else{
+        gesture=null;delete dlg.dataset.v410Pinching;if(scale<=1.03)reset(true);else{containPan();apply();}
+      }
+    },{capture:true,passive:false});
+    stage.addEventListener('touchcancel',()=>{gesture=null;delete dlg.dataset.v410Pinching;dlg.classList.remove('v410-zoom-panning');if(scale<=1.03)reset(true);},{capture:true,passive:true});
+    new MutationObserver(()=>reset(false)).observe(img,{attributes:true,attributeFilter:['src']});
+    dlg.addEventListener('close',()=>reset(false));
+    apply();
   }
   const scan=()=>{enhance(document.getElementById('photoLightbox'));enhance(document.getElementById('growthPhotoViewer'));};
   scan();new MutationObserver(scan).observe(document.body,{childList:true});
