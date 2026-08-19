@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.5 — growing zone -> measured PPFD light link */
+/* Jasper's Plant Room v4.5.1 — growing zone -> measured PPFD light link with star brightness */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -67,24 +67,22 @@
     return {min:Math.min(min,max),max:Math.max(min,max)};
   }
 
-  function ratingFor(phrase){
+  function starsFor(phrase){
     const range=numericRange(phrase);
-    if(!range)return 'Measured zone light';
-    const {min,max}=range;
-    if(max<40)return 'Too dim';
-    if(max<80)return 'Can be brighter';
-    if(min<80 && max<=130)return 'Moderate–ideal';
-    if(min>=80 && max<=150)return 'Ideal';
-    if(min<150 && max<=190)return 'Ideal–bright';
-    if(min>=150 && max<=250)return 'Bright / strong growth';
-    if(max<=250)return 'Ideal–bright';
-    return 'High / acclimate carefully';
+    if(!range)return '★★★☆☆';
+    const average=(range.min+range.max)/2;
+    let level=1;
+    if(average>=200)level=5;
+    else if(average>=160)level=4;
+    else if(average>=120)level=3;
+    else if(average>=80)level=2;
+    return '★'.repeat(level)+'☆'.repeat(5-level);
   }
 
   function zoneLightText(name){
     const phrase=ppfdPhrase(name);
     if(!phrase)return '';
-    return `${ratingFor(phrase)} · PPFD ${phrase}`;
+    return `${starsFor(phrase)} · PPFD ${phrase}`;
   }
 
   function setLightFromZone(locationInput,lightInput,name){
@@ -130,7 +128,7 @@
     if(label && !label.querySelector('.v45-location-help')){
       const help=document.createElement('span');
       help.className='v45-location-help';
-      help.textContent='Choosing a measured growing zone auto-fills Light from that zone’s PPFD. A new/custom zone leaves Light manual.';
+      help.textContent='Choosing a measured growing zone auto-fills Light from that zone’s PPFD. ★ = dimmest, ★★★★★ = brightest. A new/custom zone leaves Light manual.';
       label.appendChild(help);
     }
   }
@@ -195,7 +193,7 @@
     if(fieldLabel && !fieldLabel.querySelector('.v45-location-help')){
       const help=document.createElement('span');
       help.className='v45-location-help';
-      help.textContent='Choose a growing zone to auto-fill its measured PPFD into Light. Type a location manually to leave Light unchanged.';
+      help.textContent='Choose a growing zone to auto-fill its measured PPFD into Light. ★ = dimmest, ★★★★★ = brightest. Type a location manually to leave Light unchanged.';
       fieldLabel.appendChild(help);
     }
   }
