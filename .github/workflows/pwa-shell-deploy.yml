@@ -75,7 +75,7 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v46 PWA shell after v45')
 
-          nav_tag = '<script src="v47-mobile-navigation.js?v=4.7.0"></script>'
+          nav_tag = '<script src="v47-mobile-navigation.js?v=4.8.0"></script>'
           nav_pattern = r'<script src="v47-mobile-navigation\.js(?:\?v=[^"\']*)?"></script>'
           if re.search(nav_pattern, s):
               s = re.sub(nav_pattern, nav_tag, s, count=1)
@@ -98,5 +98,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html pwa-icon-192.png pwa-icon-512.png apple-touch-icon.png
-          git commit -m 'Load app-style mobile navigation v4.7.0'
+          git commit -m 'Load Plant Room mobile UX v4.8.0'
           git push
