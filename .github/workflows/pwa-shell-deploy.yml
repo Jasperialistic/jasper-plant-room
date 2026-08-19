@@ -1,0 +1,91 @@
+name: PWA shell deploy
+
+on:
+  push:
+    paths:
+      - 'manifest.webmanifest'
+      - 'service-worker.js'
+      - 'generate-pwa-icons.py'
+      - 'v46-pwa-shell.js'
+      - '.github/workflows/pwa-shell-deploy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-pwa-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate app icons
+        run: python generate-pwa-icons.py
+
+      - name: Wire PWA shell into page
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          viewport = '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />'
+          s, n = re.subn(
+              r'<meta name="viewport" content="[^"]*"\s*/?>',
+              viewport,
+              s,
+              count=1,
+          )
+          if n == 0:
+              raise SystemExit('viewport meta tag not found')
+
+          pwa_head = '''  <!-- PWA app shell -->
+          <link rel="manifest" href="manifest.webmanifest" />
+          <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+          <meta name="apple-mobile-web-app-title" content="Plant Room" />
+          <meta name="color-scheme" content="dark" />
+          <!-- /PWA app shell -->'''
+
+          s = re.sub(
+              r'\s*<!-- PWA app shell -->.*?<!-- /PWA app shell -->',
+              '',
+              s,
+              count=1,
+              flags=re.S,
+          )
+          theme_pattern = r'(<meta name="theme-color" content="[^"]+"\s*/?>)'
+          s, inserted = re.subn(theme_pattern, r'\1\n' + pwa_head, s, count=1)
+          if inserted == 0:
+              raise SystemExit('theme-color meta tag not found')
+
+          pwa_tag = '<script src="v46-pwa-shell.js?v=4.6.0"></script>'
+          pwa_pattern = r'<script src="v46-pwa-shell\.js(?:\?v=[^"\']*)?"></script>'
+          if re.search(pwa_pattern, s):
+              s = re.sub(pwa_pattern, pwa_tag, s, count=1)
+          else:
+              anchor = r'(<script src="v45-location-light-link\.js\?v=4\.5\.2"></script>)'
+              s, inserted = re.subn(anchor, r'\1\n  ' + pwa_tag, s, count=1)
+              if inserted == 0:
+                  raise SystemExit('Could not place v46 PWA shell after v45')
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit generated app shell assets
+        shell: bash
+        run: |
+          set -e
+          if [ -z "$(git status --porcelain -- index.html pwa-icon-192.png pwa-icon-512.png apple-touch-icon.png)" ]; then
+            echo 'PWA shell already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html pwa-icon-192.png pwa-icon-512.png apple-touch-icon.png
+          git commit -m 'Load installable mobile app shell v4.6.0'
+          git push
