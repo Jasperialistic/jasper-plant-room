@@ -1,0 +1,42 @@
+name: ChatGPT Visual Evidence Bridge
+
+on:
+  push:
+    paths:
+      - '.chatgpt-evidence-request'
+
+permissions:
+  contents: write
+
+jobs:
+  mirror-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch selected evidence image
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(tr -d '\r\n' < .chatgpt-evidence-request)"
+          test -n "$URL"
+          curl -fL --retry 3 --retry-delay 2 "$URL" -o /tmp/evidence.jpg
+          BYTES=$(wc -c < /tmp/evidence.jpg)
+          test "$BYTES" -gt 10000
+          echo "Fetched $BYTES bytes"
+
+      - name: Publish one-file bridge branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan chatgpt-visual-bridge
+          git rm -rf . >/dev/null 2>&1 || true
+          cp /tmp/evidence.jpg evidence.jpg
+          git add evidence.jpg
+          git commit -m "Refresh ChatGPT visual evidence"
+          git push --force origin HEAD:chatgpt-visual-bridge
