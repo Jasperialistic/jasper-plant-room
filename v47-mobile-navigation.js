@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.13.0 — dashboard care actions + controlled image hold */
+/* Jasper's Plant Room v4.14.0 — dashboard collection group counters */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -408,6 +408,43 @@
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
+})();
+
+/* Dashboard: compact counters for Jasper's main plant groups. */
+(function(){
+  const css=`
+#v414SpeciesStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:-20px 0 30px}
+.v414-species-stat{min-width:0;padding:11px 12px;border:1px solid #294037;border-radius:14px;background:linear-gradient(145deg,#14251f,#101d19)}
+.v414-species-stat strong{display:block;color:#e9f1ed;font-size:21px;line-height:1;font-variant-numeric:tabular-nums}
+.v414-species-stat span{display:block;margin-top:6px;color:#8fa39a;font-size:10px;font-weight:780;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v414-species-stat[data-group="anthurium"]{border-color:#3b4b42}.v414-species-stat[data-group="anthurium"] strong{color:#d8c49a}
+.v414-species-stat[data-group="alocasia"] strong{color:#a8cdb9}.v414-species-stat[data-group="philodendron"] strong{color:#b6c9a4}
+@media(max-width:700px){
+  #v414SpeciesStats{gap:5px;margin:-23px 0 24px}
+  .v414-species-stat{padding:10px 7px;border-radius:12px;text-align:center}
+  .v414-species-stat strong{font-size:19px}
+  .v414-species-stat span{font-size:8.5px;letter-spacing:-.01em}
+}
+`;
+  const style=document.createElement('style');style.id='v414SpeciesCounterStyles';style.textContent=css;document.head.appendChild(style);
+  function renderSpeciesCounters(){
+    const stats=document.getElementById('stats');if(!stats||typeof db==='undefined')return;
+    let row=document.getElementById('v414SpeciesStats');
+    if(!row){row=document.createElement('div');row.id='v414SpeciesStats';row.setAttribute('aria-label','Collection by plant group');stats.insertAdjacentElement('afterend',row);}
+    const counts={anthurium:0,alocasia:0,philodendron:0,other:0};
+    (db.plants||[]).forEach(p=>{
+      const group=String(p.group||'').trim().toLowerCase();
+      if(group.includes('anthurium'))counts.anthurium++;
+      else if(group.includes('alocasia'))counts.alocasia++;
+      else if(group.includes('philodendron'))counts.philodendron++;
+      else counts.other++;
+    });
+    row.innerHTML=`<div class="v414-species-stat" data-group="anthurium"><strong>${counts.anthurium}</strong><span>Anthuriums</span></div><div class="v414-species-stat" data-group="alocasia"><strong>${counts.alocasia}</strong><span>Alocasias</span></div><div class="v414-species-stat" data-group="philodendron"><strong>${counts.philodendron}</strong><span>Philodendrons</span></div><div class="v414-species-stat" data-group="other"><strong>${counts.other}</strong><span>Others</span></div>`;
+  }
+  if(typeof renderStats==='function'){
+    const previous=renderStats;renderStats=function(){const result=previous.apply(this,arguments);renderSpeciesCounters();return result;};
+  }
+  renderSpeciesCounters();
 })();
 
 /* Mobile plant profile: back button + interactive swipe from the left edge. */
