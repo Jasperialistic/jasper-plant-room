@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.9.3 — two-level mobile edge-back navigation */
+/* Jasper's Plant Room v4.9.4 — race-safe two-level mobile edge-back navigation */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -437,6 +437,7 @@
   const closePlant=()=>{
     if(typeof closePhotoLightbox==='function')closePhotoLightbox();
     if(dlg.open)dlg.close();
+    document.body.style.overflow='';
     document.body.classList.remove('v47-plant-open');
   };
   function reset(){
@@ -481,9 +482,7 @@
     const dismiss=dx>=Math.min(120,window.innerWidth*.28)||(dx>55&&velocity>.45);
     const surface=document.getElementById('plantDialogBody');
     if(dismiss){
-      if(surface)surface.style.transform='translate3d(105vw,0,0)';dlg.style.setProperty('--v49-plant-backdrop','0');
-      const finish=()=>{reset();closePlant();};
-      if(reduceMotion())finish();else setTimeout(finish,190);
+      reset();closePlant();
     }else{
       if(surface)surface.style.transform='translate3d(0,0,0)';dlg.style.setProperty('--v49-plant-backdrop','.72');
       if(reduceMotion())reset();else setTimeout(reset,190);
@@ -546,8 +545,7 @@
       e.preventDefault();e.stopImmediatePropagation();dlg.classList.remove('v492-photo-moving');dlg.classList.add('v492-photo-moving','v492-photo-settling');
       const dismiss=dx>=Math.min(120,window.innerWidth*.28)||(dx>55&&velocity>.45);
       if(dismiss){
-        dlg.style.setProperty('--v492-photo-x','105vw');dlg.style.setProperty('--v492-photo-backdrop','0');
-        const finish=()=>{reset();close();};if(reduceMotion())finish();else setTimeout(finish,190);
+        reset();close();
       }else{
         dlg.style.setProperty('--v492-photo-x','0px');dlg.style.setProperty('--v492-photo-backdrop','.97');
         if(reduceMotion())reset();else setTimeout(reset,190);
