@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.7.0 — native-style mobile navigation + owner quick actions */
+/* Jasper's Plant Room v4.8.0 — mobile navigation + plant view modes + iPhone safe areas */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -10,13 +10,90 @@
     more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>'
   };
 
+  const plantViewIcons={
+    list:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="3" height="3" rx=".5"/><path d="M9 6.5h12M9 12h12M9 17.5h12"/><rect x="3" y="10.5" width="3" height="3" rx=".5"/><rect x="3" y="16" width="3" height="3" rx=".5"/></svg>',
+    compact:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg>',
+    large:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.3"/><rect x="13" y="3" width="8" height="8" rx="1.3"/><rect x="3" y="13" width="8" height="8" rx="1.3"/><rect x="13" y="13" width="8" height="8" rx="1.3"/></svg>'
+  };
+
   const style=document.createElement('style');
   style.id='v47MobileNavigationStyles';
   style.textContent=`
 #mobileAppNav,#mobileQuickActions,#mobileMoreSheet,#mobileGrowthPicker{display:none}
+
+/* v4.8 Plants view selector */
+.v48-plant-viewbar{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin:0 0 12px}
+.v48-plant-viewbar-label{color:#82958d;font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+.v48-plant-view-buttons{display:inline-flex;gap:3px;padding:3px;border:1px solid #2b4238;border-radius:12px;background:#101c18}
+.v48-plant-view-btn{width:39px;height:35px;display:grid;place-items:center;padding:0;border:0;border-radius:9px;background:transparent;color:#71877d;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.v48-plant-view-btn:hover{color:#dce8e2;background:#192b24}
+.v48-plant-view-btn[data-active="1"]{color:#152017;background:#d5be85}
+.v48-plant-view-btn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.v48-plant-view-btn[aria-label="Compact grid"] svg rect,.v48-plant-view-btn[aria-label="Large grid"] svg rect{fill:currentColor;stroke:none}
+
+#plantGrid[data-v48-view="large"]{grid-template-columns:repeat(3,1fr);gap:16px}
+#plantGrid[data-v48-view="list"]{grid-template-columns:1fr;gap:10px}
+#plantGrid[data-v48-view="list"] .plant-card{display:grid;grid-template-columns:132px minmax(0,1fr);align-items:stretch;min-height:118px;transform:none}
+#plantGrid[data-v48-view="list"] .plant-photo{width:132px;height:100%;min-height:118px;aspect-ratio:auto;object-fit:cover}
+#plantGrid[data-v48-view="list"] .plant-body{min-width:0;padding:12px 14px}
+#plantGrid[data-v48-view="list"] .plant-top h3{font-size:19px}
+#plantGrid[data-v48-view="list"] .chips{margin:9px 0}
+#plantGrid[data-v48-view="list"] .care-line{padding-top:9px}
+
+#plantGrid[data-v48-view="compact"]{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+#plantGrid[data-v48-view="compact"] .plant-card{position:relative;min-width:0;border-radius:12px;overflow:hidden;transform:none;background:#0d1714}
+#plantGrid[data-v48-view="compact"] .plant-photo{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+#plantGrid[data-v48-view="compact"] .plant-body{position:absolute;z-index:2;left:0;right:0;bottom:0;min-width:0;padding:30px 8px 8px;background:linear-gradient(transparent,rgba(4,9,7,.82));pointer-events:none}
+#plantGrid[data-v48-view="compact"] .plant-top{display:block;min-width:0}
+#plantGrid[data-v48-view="compact"] .plant-top h3{margin:0;overflow:hidden;color:#fff;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:12px;font-weight:780;line-height:1.15;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+#plantGrid[data-v48-view="compact"] .plant-sub,#plantGrid[data-v48-view="compact"] .chips,#plantGrid[data-v48-view="compact"] .care-line,#plantGrid[data-v48-view="compact"] .status{display:none!important}
+#plantGrid .empty{grid-column:1/-1}
+
+@media(max-width:900px) and (min-width:701px){
+  #plantGrid[data-v48-view="large"]{grid-template-columns:repeat(2,1fr)}
+  #plantGrid[data-v48-view="compact"]{grid-template-columns:repeat(4,1fr)}
+}
+
 @media(max-width:700px){
+  /* iPhone / PWA safe areas: keep interactive header controls below the Dynamic Island. */
+  .topbar{
+    min-height:68px!important;
+    padding-top:max(10px,env(safe-area-inset-top))!important;
+    padding-right:max(14px,env(safe-area-inset-right))!important;
+    padding-bottom:10px!important;
+    padding-left:max(14px,env(safe-area-inset-left))!important;
+  }
+  .auth-gate{
+    padding-top:max(20px,calc(env(safe-area-inset-top) + 10px))!important;
+    padding-right:max(20px,env(safe-area-inset-right))!important;
+    padding-bottom:max(20px,env(safe-area-inset-bottom))!important;
+    padding-left:max(20px,env(safe-area-inset-left))!important;
+  }
+
   body.v47-mobile-nav-ready .shell{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
   body.v47-mobile-nav-ready .tabs{display:none!important}
+
+  .v48-plant-viewbar{margin:0 0 10px}
+  .v48-plant-viewbar-label{display:none}
+  .v48-plant-view-buttons{margin-left:auto}
+  .v48-plant-view-btn{width:41px;height:37px}
+
+  #plantGrid[data-v48-view="compact"]{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;margin-left:-12px;margin-right:-12px}
+  #plantGrid[data-v48-view="compact"] .plant-card{border:0;border-radius:0}
+  #plantGrid[data-v48-view="compact"] .plant-body{padding:26px 6px 6px}
+  #plantGrid[data-v48-view="compact"] .plant-top h3{font-size:10px}
+
+  #plantGrid[data-v48-view="large"]{grid-template-columns:1fr;gap:14px}
+  #plantGrid[data-v48-view="list"]{gap:8px}
+  #plantGrid[data-v48-view="list"] .plant-card{grid-template-columns:92px minmax(0,1fr);min-height:92px;border-radius:14px}
+  #plantGrid[data-v48-view="list"] .plant-photo{width:92px;min-height:92px}
+  #plantGrid[data-v48-view="list"] .plant-body{padding:9px 10px}
+  #plantGrid[data-v48-view="list"] .plant-top h3{font-size:16px;line-height:1.15}
+  #plantGrid[data-v48-view="list"] .plant-sub{font-size:10px;margin-top:3px}
+  #plantGrid[data-v48-view="list"] .chips{gap:4px;margin:7px 0}
+  #plantGrid[data-v48-view="list"] .chip{padding:3px 6px;font-size:9px}
+  #plantGrid[data-v48-view="list"] .care-line{display:none}
+  #plantGrid[data-v48-view="list"] .status{padding:4px 6px;font-size:9px}
 
   #mobileAppNav{
     position:fixed;z-index:2147482500;left:10px;right:10px;bottom:max(8px,env(safe-area-inset-bottom));
@@ -91,6 +168,53 @@
     if(view!=='addplant')window.scrollTo({top:0,behavior:'smooth'});
     scheduleSync();
     return true;
+  }
+
+  function plantViewStorageKey(){return `jasperPlantRoom.plantsView.${mq.matches?'mobile':'desktop'}`;}
+  function defaultPlantView(){return mq.matches?'compact':'large';}
+  function savedPlantView(){
+    try{
+      const value=localStorage.getItem(plantViewStorageKey());
+      return ['list','compact','large'].includes(value)?value:defaultPlantView();
+    }catch(_e){return defaultPlantView();}
+  }
+  function applyPlantView(mode,persist){
+    if(!['list','compact','large'].includes(mode))mode=defaultPlantView();
+    const grid=document.getElementById('plantGrid');
+    if(grid)grid.dataset.v48View=mode;
+    document.querySelectorAll('[data-v48-plant-view]').forEach(btn=>{
+      const active=btn.dataset.v48PlantView===mode;
+      btn.dataset.active=active?'1':'0';
+      btn.setAttribute('aria-pressed',active?'true':'false');
+    });
+    if(persist){
+      try{localStorage.setItem(plantViewStorageKey(),mode);}catch(_e){}
+    }
+  }
+  function ensurePlantViewControls(){
+    const view=document.getElementById('plantsView');
+    const toolbar=view?.querySelector('.toolbar');
+    if(!view||!toolbar)return null;
+    let bar=document.getElementById('plantViewSwitcher');
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='plantViewSwitcher';
+      bar.className='v48-plant-viewbar';
+      bar.innerHTML=`<span class="v48-plant-viewbar-label">View</span><div class="v48-plant-view-buttons" role="group" aria-label="Plant view">
+        <button type="button" class="v48-plant-view-btn" data-v48-plant-view="list" aria-label="List" title="List">${plantViewIcons.list}</button>
+        <button type="button" class="v48-plant-view-btn" data-v48-plant-view="compact" aria-label="Compact grid" title="Compact grid">${plantViewIcons.compact}</button>
+        <button type="button" class="v48-plant-view-btn" data-v48-plant-view="large" aria-label="Large grid" title="Large grid">${plantViewIcons.large}</button>
+      </div>`;
+      view.insertBefore(bar,toolbar);
+      bar.querySelectorAll('[data-v48-plant-view]').forEach(btn=>{
+        btn.addEventListener('click',()=>applyPlantView(btn.dataset.v48PlantView,true));
+      });
+    }
+    return bar;
+  }
+  function syncPlantView(){
+    ensurePlantViewControls();
+    applyPlantView(savedPlantView(),false);
   }
 
   function closeSheet(dlg){if(dlg?.open)dlg.close();}
@@ -253,6 +377,7 @@
 
   function runSync(){
     syncQueued=false;
+    syncPlantView();
     if(!mq.matches){
       document.body?.classList.remove('v47-mobile-nav-ready','v47-plant-open');
       return;
@@ -268,13 +393,17 @@
   }
 
   function init(){
+    syncPlantView();
     scheduleSync();
     document.addEventListener('click',event=>{
       if(event.target.closest('.tab,[data-view],#closePlant'))setTimeout(scheduleSync,0);
     },true);
     const observer=new MutationObserver(scheduleSync);
     observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','open']});
-    if(typeof mq.addEventListener==='function')mq.addEventListener('change',scheduleSync);
+    if(typeof mq.addEventListener==='function')mq.addEventListener('change',()=>{
+      syncPlantView();
+      scheduleSync();
+    });
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
