@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.26.0 — surfaced mobile profile carousel */
+/* Jasper's Plant Room v4.27.0 — integrated mobile care summary */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -514,7 +514,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.26.0';
+  const VERSION='v4.27.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -1382,7 +1382,7 @@ body{
 })();
 
 
-/* Jasper's Plant Room v4.26.0 — surfaced mobile profile carousel. */
+/* Jasper's Plant Room v4.27.0 — integrated mobile care summary. */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   const dlg=document.getElementById('plantDialog');
@@ -1390,7 +1390,7 @@ body{
   const names=['gallery','growth','details','care'];
 
   const style=document.createElement('style');
-  style.id='v426PlantCarouselStyles';
+  style.id='v427PlantCarouselStyles';
   style.textContent=`
 @media(max-width:700px){
   #plantDialog .v411-tabs.v426-tabs-ready{overflow:visible}
@@ -1441,18 +1441,46 @@ body{
     transition:opacity 170ms ease;will-change:transform,opacity
   }
   #plantDialog .v426-swipe-shadow[data-dragging="1"]{transition:none}
-  #plantDialog .v411-panel[data-v411-panel="details"]{padding-bottom:154px!important}
-  #plantDialog .v426-details-summary{display:none!important}
-  #plantDialog .dialog-inner[data-v426-active-tab="details"]>.v417-care-summary.v426-details-summary{
-    display:grid!important;position:fixed;z-index:2147482850;left:12px;right:12px;margin:0;padding:7px;
-    border:1px solid rgba(123,159,142,.42);border-radius:17px;background:rgba(12,23,19,.96);
-    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 14px 38px rgba(0,0,0,.52)
+  #plantDialog .v426-tab-track>.v411-panel[data-v411-panel="details"]{
+    display:flex!important;flex-direction:column;min-height:calc(100dvh - 166px);
+    padding:10px 12px 12px!important
   }
-  body.owner-mode #plantDialog .dialog-inner[data-v426-active-tab="details"]>.v426-details-summary{bottom:calc(82px + env(safe-area-inset-bottom))}
-  body:not(.owner-mode) #plantDialog .dialog-inner[data-v426-active-tab="details"]>.v426-details-summary{bottom:calc(12px + env(safe-area-inset-bottom))}
-  #plantDialog .v426-details-summary .v417-care-state{padding:9px 10px}
-  #plantDialog .v426-details-summary .v417-care-state strong{font-size:12px}
+  #plantDialog .v411-panel[data-v411-panel="details"] .v411-section-title{
+    margin:1px 0 2px;font-size:16px
+  }
+  #plantDialog .v411-panel[data-v411-panel="details"] .v411-section-note{
+    margin:0 0 7px;font-size:10px;line-height:1.3
+  }
+  #plantDialog .v411-panel[data-v411-panel="details"] .detail-grid{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 12px;
+    width:100%;margin:2px 0 9px
+  }
+  #plantDialog .v411-panel[data-v411-panel="details"] .detail{
+    min-width:0;padding:6px 0;border-bottom-color:rgba(99,137,119,.24)
+  }
+  #plantDialog .v411-panel[data-v411-panel="details"] .detail span{
+    font-size:8.5px;line-height:1.15;letter-spacing:.075em
+  }
+  #plantDialog .v411-panel[data-v411-panel="details"] .detail strong{
+    margin-top:2px;font-size:11.5px;line-height:1.22
+  }
+  #plantDialog .v411-panel[data-v411-panel="details"]>.v417-care-summary.v426-details-summary{
+    display:grid!important;position:static!important;z-index:auto;flex:0 0 auto;width:100%;
+    margin:auto 0 0!important;padding:10px 0 0;border:0;border-top:1px solid rgba(112,151,132,.28);
+    border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none
+  }
+  #plantDialog .v426-details-summary .v417-care-state{
+    padding:8px 9px;border-color:rgba(112,151,132,.3);
+    background:linear-gradient(145deg,rgba(24,44,36,.96),rgba(15,28,23,.98));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 7px 17px rgba(0,0,0,.2)
+  }
+  #plantDialog .v426-details-summary .v417-care-state strong{font-size:11.5px}
+}
+@media(max-width:700px) and (max-height:700px){
+  #plantDialog .v411-panel[data-v411-panel="details"] .v411-section-note{display:none}
+  #plantDialog .v411-panel[data-v411-panel="details"] .detail-grid{gap:1px 10px;margin:1px 0 6px}
+  #plantDialog .v411-panel[data-v411-panel="details"] .detail{padding:4px 0}
+  #plantDialog .v426-details-summary .v417-care-state{padding:6px 8px}
 }
 @media(prefers-reduced-motion:reduce){
   #plantDialog .v426-tab-track,#plantDialog .v426-tab-viewport,#plantDialog .v426-tab-indicator,
@@ -1582,10 +1610,10 @@ body{
   }
 
   function moveSummary(inner){
-    const viewport=inner.querySelector('.v426-tab-viewport'),summary=ensureSummary(inner);
-    if(!viewport||!summary)return false;
+    const details=inner.querySelector('.v411-panel[data-v411-panel="details"]'),summary=ensureSummary(inner);
+    if(!details||!summary)return false;
     summary.classList.add('v426-details-summary');
-    if(summary.parentElement!==inner||summary.previousElementSibling!==viewport)viewport.insertAdjacentElement('afterend',summary);
+    if(summary.parentElement!==details||summary!==details.lastElementChild)details.appendChild(summary);
     syncAccessibility(inner,activeIndex(inner));return true;
   }
 
