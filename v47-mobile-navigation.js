@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.20.0 — editable location label photos */
+/* Jasper's Plant Room v4.21.0 — editable location label photos + zone deletion */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -1129,4 +1129,106 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
   }
   const scan=()=>{enhance(document.getElementById('photoLightbox'));enhance(document.getElementById('growthPhotoViewer'));};
   scan();new MutationObserver(scan).observe(document.body,{childList:true});
+})();
+
+
+/* Jasper's Plant Room v4.21.0 — guarded growing-zone deletion. */
+(function(){
+  const style=document.createElement('style');
+  style.id='v421ZoneDeleteStyles';
+  style.textContent=`
+#zoneEditDialog .v421-zone-delete{margin-right:auto;border:1px solid #7f403f;background:#321d1c;color:#ffb4af;font-weight:800}
+#zoneEditDialog .v421-zone-delete:hover{border-color:#b85b58;background:#482524;color:#ffd2ce}
+#zoneEditDialog .v421-zone-delete:disabled{cursor:wait;opacity:.58}
+@media(max-width:700px){
+  #zoneEditDialog .modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #zoneEditDialog .v421-zone-delete{grid-column:1/-1;width:100%;margin:0}
+}
+`;
+  document.head.appendChild(style);
+
+  const normalise=value=>String(value||'').trim().toLowerCase();
+  const zoneFor=id=>{
+    try{return (db.locations||[]).find(zone=>String(zone.id)===String(id));}
+    catch(_error){return null;}
+  };
+  const assignedPlants=zone=>{
+    try{return (db.plants||[]).filter(plant=>normalise(plant.location)===normalise(zone.name));}
+    catch(_error){return [];}
+  };
+  const storagePath=value=>{
+    const raw=String(value||'');
+    if(!raw)return '';
+    const marker='/storage/v1/object/public/plant-media/';
+    const index=raw.indexOf(marker);
+    if(index>=0){
+      const encoded=raw.slice(index+marker.length).split('?')[0];
+      try{return decodeURIComponent(encoded);}catch(_error){return encoded;}
+    }
+    if(!/^https?:\/\//i.test(raw))return raw.replace(/^\/+/, '');
+    return '';
+  };
+
+  function ensureDeleteButton(){
+    const dialog=document.getElementById('zoneEditDialog');
+    const actions=dialog?.querySelector('.modal-actions');
+    if(!dialog||!actions)return null;
+    let button=document.getElementById('deleteZoneBtn');
+    if(button)return button;
+    button=document.createElement('button');
+    button.type='button';
+    button.id='deleteZoneBtn';
+    button.className='v421-zone-delete';
+    button.textContent='Delete zone';
+    button.addEventListener('click',deleteCurrentZone);
+    actions.prepend(button);
+    return button;
+  }
+
+  async function deleteCurrentZone(){
+    if(typeof requireOwner==='function'&&!requireOwner())return;
+    const dialog=document.getElementById('zoneEditDialog');
+    const id=document.getElementById('zoneEditId')?.value;
+    const zone=zoneFor(id);
+    const button=ensureDeleteButton();
+    if(!zone||!id||!button)return;
+
+    const plants=assignedPlants(zone);
+    if(plants.length){
+      const names=plants.slice(0,5).map(plant=>plant.name).join(', ');
+      const more=plants.length>5?` and ${plants.length-5} more`:'';
+      alert(`“${zone.name}” still contains ${plants.length} plant${plants.length===1?'':'s'} (${names}${more}). Move ${plants.length===1?'it':'them'} to another zone first, then delete this zone.`);
+      return;
+    }
+
+    if(!confirm(`Delete “${zone.name}” permanently?\n\nThis cannot be undone.`))return;
+
+    const original=button.textContent;
+    button.disabled=true;
+    button.textContent='Deleting…';
+    try{
+      const result=await sb.from('grow_zones').delete().eq('id',id).select('id');
+      if(result.error)throw result.error;
+      if(!result.data?.length)throw new Error('The zone was not deleted. Please refresh and try again.');
+
+      const oldPhotoPath=storagePath(zone.photo);
+      if(oldPhotoPath){
+        const removed=await sb.storage.from('plant-media').remove([oldPhotoPath]);
+        if(removed.error)console.warn('Zone deleted, but its old label photo could not be cleaned up.',removed.error);
+      }
+
+      if(dialog?.open)dialog.close();
+      await loadCloud();
+      document.querySelector('[data-view="locations"]')?.click();
+    }catch(error){
+      console.error('Delete zone failed',error);
+      alert(`Could not delete zone: ${error?.message||error}`);
+    }finally{
+      button.disabled=false;
+      button.textContent=original;
+    }
+  }
+
+  ensureDeleteButton();
+  new MutationObserver(ensureDeleteButton).observe(document.body,{childList:true,subtree:true});
 })();
