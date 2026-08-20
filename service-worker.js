@@ -1,6 +1,5 @@
-/* Jasper's Plant Room v4.29.0 — built-in patch notes */
-const CACHE_NAME='jasper-plant-room-shell-v4.29.0';
-const MIGRATE_FROM='jasper-plant-room-shell-v4.28.0';
+/* Jasper's Plant Room v4.30.0 — reliable cross-version updates */
+const CACHE_NAME='jasper-plant-room-shell-v4.30.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
@@ -17,8 +16,7 @@ self.addEventListener('install',event=>{
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache=>cache.addAll(SHELL))
-      .then(()=>caches.has(MIGRATE_FROM))
-      .then(shouldMigrate=>{if(shouldMigrate)return self.skipWaiting();})
+      .then(()=>self.skipWaiting())
   );
 });
 
