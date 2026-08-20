@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.27.0 — integrated mobile care summary */
+/* Jasper's Plant Room v4.28.0 — compact mobile care actions */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -514,7 +514,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.27.0';
+  const VERSION='v4.28.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -1717,5 +1717,147 @@ body{
   if(typeof mq.addEventListener==='function')mq.addEventListener('change',()=>{
     if(mq.matches)schedule();else dlg.querySelectorAll('.dialog-inner').forEach(restoreSummary);
   });
+  schedule();
+})();
+
+
+/* Jasper's Plant Room v4.28.0 — compact mobile care actions. */
+(function(){
+  const mq=window.matchMedia('(max-width:700px)');
+  const dlg=document.getElementById('plantDialog');
+  if(!dlg)return;
+
+  const style=document.createElement('style');
+  style.id='v428CompactCareActionsStyles';
+  style.textContent=`
+@media(max-width:700px){
+  #plantDialog .v411-panel[data-v411-panel="care"] .v411-care-details{display:none!important}
+  #plantDialog .v411-panel[data-v411-panel="care"] .quick-actions.v428-care-actions{
+    --v428-care-count:2;
+    display:grid!important;grid-template-columns:repeat(var(--v428-care-count),minmax(0,1fr)) 46px;
+    align-items:stretch;gap:6px;margin:10px 0 0;padding:8px;
+    border:1px solid rgba(103,143,124,.26);border-radius:15px;
+    background:rgba(10,20,17,.46);box-shadow:inset 0 1px 0 rgba(255,255,255,.025)
+  }
+  #plantDialog .v411-panel[data-v411-panel="care"] .quick-actions.v428-care-actions::before{
+    content:'QUICK LOG';grid-column:1/-1;min-height:0;margin:0 1px 1px;
+    color:#71877d;font-size:8.5px;font-weight:850;letter-spacing:.115em
+  }
+  #plantDialog .v428-care-actions [data-quick]{
+    display:flex!important;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;
+    margin:0!important;padding:0 8px!important;border-radius:11px!important;
+    font-size:11px!important;font-weight:800!important;line-height:1!important;white-space:nowrap;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 4px 11px rgba(0,0,0,.16)
+  }
+  #plantDialog .v428-care-actions [data-quick] svg{
+    flex:0 0 auto;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round
+  }
+  #plantDialog .v428-care-actions [data-quick="custom"]{
+    width:46px;min-width:46px;padding:0!important;border-color:rgba(213,190,133,.42)!important;
+    background:rgba(213,190,133,.1)!important;color:#dec88f!important;font-size:25px!important;font-weight:450!important
+  }
+  #plantDialog .v428-care-actions [data-quick]:active{transform:scale(.96)}
+  #plantDialog .v411-section-title.v428-details-title{
+    display:flex!important;align-items:center;justify-content:space-between;gap:10px
+  }
+  #plantDialog .v428-edit-details{
+    display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;min-height:36px;margin:-5px 0 -4px;
+    padding:0!important;border:1px solid rgba(112,151,132,.3)!important;border-radius:11px!important;
+    background:rgba(20,38,31,.78)!important;color:#a9bdb3!important;box-shadow:none!important
+  }
+  #plantDialog .v428-edit-details svg{
+    width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round
+  }
+}
+@media(max-width:360px){
+  #plantDialog .v428-care-actions [data-quick]{gap:3px;padding:0 5px!important;font-size:10px!important}
+  #plantDialog .v428-care-actions [data-quick] svg{width:14px;height:14px}
+}
+`;
+  document.head.appendChild(style);
+
+  const icons={
+    moist:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5S6.7 9.3 6.7 14a5.3 5.3 0 0 0 10.6 0C17.3 9.3 12 3.5 12 3.5Z"/><path d="M9.3 14.3c.2 1.3 1 2.1 2.3 2.4"/></svg>',
+    water:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5S6.7 9.3 6.7 14a5.3 5.3 0 0 0 10.6 0C17.3 9.3 12 3.5 12 3.5Z"/><path d="m9.5 14 1.7 1.7 3.6-3.8"/></svg>',
+    reservoir:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16v8.8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M7 14c1.2-.9 2.3-.9 3.5 0s2.3.9 3.5 0 2.3-.9 3.5 0"/></svg>',
+    edit:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.5 19.5 3.8-.8 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m13.8 7.2 3 3"/></svg>'
+  };
+
+  function labelAction(button,label,aria,icon){
+    if(!button)return;
+    if(button.dataset.v428Label!==label){
+      button.innerHTML=`${icon}<span>${label}</span>`;
+      button.dataset.v428Label=label;
+    }
+    button.setAttribute('aria-label',aria);
+    button.title=aria;
+  }
+
+  function enhance(inner){
+    if(!mq.matches||!dlg.open||!inner)return;
+    const actions=inner.querySelector('.v411-panel[data-v411-panel="care"] .quick-actions');
+    if(actions){
+      actions.classList.add('v428-care-actions');
+      const moist=actions.querySelector('[data-quick="moist"]');
+      const water=actions.querySelector('[data-quick="water"]');
+      const reservoir=actions.querySelector('[data-quick="reservoir"]');
+      const custom=actions.querySelector('[data-quick="custom"]');
+      labelAction(moist,'Moist','Checked — still moist',icons.moist);
+      labelAction(water,'Watered','Watered today',icons.water);
+      labelAction(reservoir,'Reservoir','Reservoir topped up',icons.reservoir);
+      if(custom){
+        if(custom.dataset.v428Label!=='plus'){custom.textContent='＋';custom.dataset.v428Label='plus';}
+        custom.setAttribute('aria-label','Add custom care entry');
+        custom.title='Add custom care entry';
+      }
+      const count=[moist,water,reservoir].filter(Boolean).length;
+      actions.style.setProperty('--v428-care-count',String(Math.max(1,count)));
+    }
+
+    const details=inner.querySelector('.v411-panel[data-v411-panel="details"]');
+    const title=details?.querySelector('.v411-section-title');
+    const edit=inner.querySelector('#editPlantBtn');
+    if(title&&edit){
+      title.classList.add('v428-details-title');
+      edit.classList.add('v428-edit-details');
+      if(edit.dataset.v428Label!=='edit'){edit.innerHTML=icons.edit;edit.dataset.v428Label='edit';}
+      edit.setAttribute('aria-label','Edit plant details');
+      edit.title='Edit plant details';
+      if(edit.parentElement!==title)title.appendChild(edit);
+    }
+  }
+
+  function restore(inner){
+    const actions=inner.querySelector('.quick-actions');
+    if(actions){
+      actions.classList.remove('v428-care-actions');actions.style.removeProperty('--v428-care-count');
+      const labels={moist:'Checked — still moist',water:'Watered today',reservoir:'Reservoir topped',custom:'Add custom entry'};
+      actions.querySelectorAll('[data-quick]').forEach(button=>{
+        const label=labels[button.dataset.quick];if(label)button.textContent=label;
+        delete button.dataset.v428Label;button.removeAttribute('title');
+      });
+    }
+    const title=inner.querySelector('.v428-details-title');title?.classList.remove('v428-details-title');
+    const edit=inner.querySelector('#editPlantBtn');
+    if(edit){
+      edit.classList.remove('v428-edit-details');edit.textContent='Edit details';delete edit.dataset.v428Label;
+      edit.removeAttribute('aria-label');edit.removeAttribute('title');
+      actions?.appendChild(edit);
+    }
+  }
+
+  let queued=false;
+  function schedule(){
+    if(queued)return;queued=true;
+    requestAnimationFrame(()=>{
+      queued=false;
+      const inner=dlg.querySelector('.dialog-inner');
+      if(mq.matches)enhance(inner);else if(inner)restore(inner);
+    });
+  }
+  new MutationObserver(schedule).observe(dlg,{childList:true,subtree:true});
+  dlg.addEventListener('close',()=>{queued=false;});
+  if(typeof mq.addEventListener==='function')mq.addEventListener('change',schedule);
   schedule();
 })();
