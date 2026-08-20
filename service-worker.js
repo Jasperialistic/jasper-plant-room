@@ -1,6 +1,6 @@
-/* Jasper's Plant Room v4.25.0 — fluid mobile profile carousel */
-const CACHE_NAME='jasper-plant-room-shell-v4.25.0';
-const MIGRATE_FROM='jasper-plant-room-shell-v4.24.0';
+/* Jasper's Plant Room v4.26.0 — surfaced mobile profile carousel */
+const CACHE_NAME='jasper-plant-room-shell-v4.26.0';
+const MIGRATE_FROM='jasper-plant-room-shell-v4.25.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
