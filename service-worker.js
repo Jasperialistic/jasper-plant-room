@@ -1,6 +1,6 @@
-/* Jasper's Plant Room v4.21.0 — PWA label refresh */
-const CACHE_NAME='jasper-plant-room-shell-v4.21.0-r1';
-const MIGRATE_FROM='jasper-plant-room-shell-v4.21.0';
+/* Jasper's Plant Room v4.22.0 — visual depth refresh */
+const CACHE_NAME='jasper-plant-room-shell-v4.22.0';
+const MIGRATE_FROM='jasper-plant-room-shell-v4.21.0-r1';
 const SHELL=[
   './',
   './manifest.webmanifest',
