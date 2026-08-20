@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.23.0 — desktop native image actions */
+/* Jasper's Plant Room v4.24.0 — mobile profile tab gestures */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -514,7 +514,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.23.0';
+  const VERSION='v4.24.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -607,7 +607,7 @@ body:not(.owner-mode) #v416HeaderMenuPanel>.admin-only{display:none!important}
   let gesture=null;
   dlg.addEventListener('touchstart',e=>{
     if(!dlg.open||e.touches.length!==1)return;
-    const t=e.touches[0];if(t.clientX>56)return;
+    const t=e.touches[0];if(t.clientX>24)return;
     gesture={startX:t.clientX,startY:t.clientY,lastX:t.clientX,lastTime:performance.now(),dx:0,locked:null};
   },{capture:true,passive:true});
   dlg.addEventListener('touchmove',e=>{
@@ -1379,4 +1379,154 @@ body{
 }
 `;
   document.head.appendChild(style);
+})();
+
+
+/* Jasper's Plant Room v4.24.0 — mobile profile tab reset and swipe navigation. */
+(function(){
+  const mq=window.matchMedia('(max-width:700px)');
+  const dlg=document.getElementById('plantDialog');
+  if(!dlg)return;
+
+  const style=document.createElement('style');
+  style.id='v424PlantTabSwipeStyles';
+  style.textContent=`
+@media(max-width:700px){
+  #plantDialog .v411-tab{
+    transition:color 150ms ease,background 150ms ease,box-shadow 150ms ease,transform 110ms ease
+  }
+  #plantDialog .v411-tab:active{transform:scale(.96)}
+  #plantDialog .v411-tab[aria-selected="true"]{
+    background:linear-gradient(180deg,#223a31,#192d25);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 4px 11px rgba(0,0,0,.18)
+  }
+  #plantDialog .v411-panel[data-active="1"]{
+    touch-action:pan-y;overscroll-behavior-x:contain;
+    transform:translate3d(var(--v424-tab-x,0px),0,0);
+    opacity:var(--v424-tab-opacity,1)
+  }
+  #plantDialog .v411-panel.v424-tab-dragging{will-change:transform,opacity}
+  #plantDialog .v411-panel.v424-tab-settling{
+    transition:transform 180ms cubic-bezier(.2,.8,.2,1),opacity 180ms ease
+  }
+  #plantDialog .v411-panel.v424-tab-enter-next{animation:v424TabEnterNext 190ms cubic-bezier(.2,.8,.2,1)}
+  #plantDialog .v411-panel.v424-tab-enter-prev{animation:v424TabEnterPrev 190ms cubic-bezier(.2,.8,.2,1)}
+  @keyframes v424TabEnterNext{from{transform:translate3d(28px,0,0);opacity:.72}to{transform:translate3d(0,0,0);opacity:1}}
+  @keyframes v424TabEnterPrev{from{transform:translate3d(-28px,0,0);opacity:.72}to{transform:translate3d(0,0,0);opacity:1}}
+}
+`;
+  document.head.appendChild(style);
+
+  const names=['gallery','growth','details','care'];
+  const reduceMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const activePanel=inner=>inner?.querySelector('.v411-panel[data-active="1"]');
+  const activeName=inner=>activePanel(inner)?.dataset.v411Panel||'gallery';
+
+  function resetProfileScroll(inner){
+    requestAnimationFrame(()=>{
+      const targets=[dlg,document.getElementById('plantDialogBody'),inner];
+      targets.forEach(target=>{
+        if(!target)return;
+        try{target.scrollTo(0,0);}catch(_error){target.scrollTop=0;}
+        target.scrollTop=0;
+      });
+    });
+  }
+
+  function clearPanel(panel,animate=false){
+    if(!panel)return;
+    panel.classList.toggle('v424-tab-settling',animate&&!reduceMotion());
+    panel.classList.remove('v424-tab-dragging');
+    panel.style.setProperty('--v424-tab-x','0px');
+    panel.style.setProperty('--v424-tab-opacity','1');
+    if(animate&&!reduceMotion())setTimeout(()=>panel.classList.remove('v424-tab-settling'),190);
+    else panel.classList.remove('v424-tab-settling');
+  }
+
+  function animateEntry(inner,direction){
+    if(!direction||reduceMotion())return;
+    requestAnimationFrame(()=>{
+      const panel=activePanel(inner);if(!panel)return;
+      const cls=direction>0?'v424-tab-enter-next':'v424-tab-enter-prev';
+      panel.classList.remove('v424-tab-enter-next','v424-tab-enter-prev');
+      void panel.offsetWidth;
+      panel.classList.add(cls);
+      setTimeout(()=>panel.classList.remove(cls),210);
+    });
+  }
+
+  dlg.addEventListener('click',event=>{
+    const tab=event.target.closest?.('.v411-tab');if(!tab||!mq.matches)return;
+    const inner=tab.closest('.dialog-inner');if(!inner)return;
+    resetProfileScroll(inner);
+  });
+
+  let gesture=null;
+  dlg.addEventListener('touchstart',event=>{
+    if(!mq.matches||!dlg.open||event.touches.length!==1)return;
+    const panel=event.target.closest?.('.v411-panel[data-active="1"]');
+    if(!panel)return;
+    if(event.target.closest?.('button,a,input,textarea,select,[contenteditable="true"]'))return;
+    const touch=event.touches[0];
+    if(touch.clientX<=28)return;
+    gesture={
+      inner:panel.closest('.dialog-inner'),panel,
+      startX:touch.clientX,startY:touch.clientY,lastX:touch.clientX,
+      startTime:performance.now(),dx:0,locked:null
+    };
+  },{capture:true,passive:true});
+
+  dlg.addEventListener('touchmove',event=>{
+    if(!gesture||event.touches.length!==1)return;
+    const touch=event.touches[0],dx=touch.clientX-gesture.startX,dy=touch.clientY-gesture.startY;
+    if(gesture.locked===null&&(Math.abs(dx)>9||Math.abs(dy)>9)){
+      gesture.locked=Math.abs(dx)>Math.abs(dy)*1.2?'tabs':'scroll';
+    }
+    if(gesture.locked!=='tabs')return;
+    event.preventDefault();
+    gesture.dx=dx;gesture.lastX=touch.clientX;
+    const visualX=Math.sign(dx)*Math.min(38,Math.abs(dx)*.32);
+    const opacity=1-Math.min(.16,Math.abs(dx)/520);
+    gesture.panel.classList.add('v424-tab-dragging');
+    gesture.panel.style.setProperty('--v424-tab-x',`${visualX}px`);
+    gesture.panel.style.setProperty('--v424-tab-opacity',String(opacity));
+  },{capture:true,passive:false});
+
+  dlg.addEventListener('touchend',event=>{
+    if(!gesture)return;
+    const current=gesture,changed=event.changedTouches[0];
+    const dx=changed?changed.clientX-current.startX:current.dx;
+    const elapsed=Math.max(1,performance.now()-current.startTime);
+    const velocity=Math.abs(dx)/elapsed;
+    gesture=null;
+    if(current.locked!=='tabs'){clearPanel(current.panel);return;}
+
+    event.preventDefault();event.stopPropagation();
+    const from=names.indexOf(activeName(current.inner));
+    const direction=dx<0?1:-1;
+    const to=from+direction;
+    const commit=(Math.abs(dx)>=58||(Math.abs(dx)>=32&&velocity>.48))&&to>=0&&to<names.length;
+    clearPanel(current.panel,!commit);
+
+    if(!commit)return;
+    const target=current.inner.querySelector(`.v411-tab[data-v411-tab="${names[to]}"]`);
+    if(!target)return;
+    target.click();
+    animateEntry(current.inner,direction);
+    navigator.vibrate?.(8);
+  },{capture:true,passive:false});
+
+  dlg.addEventListener('touchcancel',()=>{
+    if(gesture)clearPanel(gesture.panel,true);
+    gesture=null;
+  },{capture:true,passive:true});
+
+  dlg.addEventListener('close',()=>{
+    if(gesture)clearPanel(gesture.panel);
+    gesture=null;
+    dlg.querySelectorAll('.v424-tab-dragging,.v424-tab-settling,.v424-tab-enter-next,.v424-tab-enter-prev').forEach(panel=>{
+      panel.classList.remove('v424-tab-dragging','v424-tab-settling','v424-tab-enter-next','v424-tab-enter-prev');
+      panel.style.removeProperty('--v424-tab-x');panel.style.removeProperty('--v424-tab-opacity');
+    });
+  });
 })();
