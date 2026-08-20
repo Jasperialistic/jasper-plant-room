@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.22.0 — visual depth pass */
+/* Jasper's Plant Room v4.23.0 — desktop native image actions */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -514,7 +514,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.22.0';
+  const VERSION='v4.23.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -911,7 +911,7 @@ body:not(.owner-mode) #v416HeaderMenuPanel>.admin-only{display:none!important}
     if(!stage||!img)return;dlg.dataset.v413ImageHold='1';
     let timer=0,start=null;
     const cancel=()=>{clearTimeout(timer);timer=0;start=null;};
-    stage.addEventListener('contextmenu',e=>{e.preventDefault();e.stopImmediatePropagation();},true);
+    stage.addEventListener('contextmenu',e=>{if(window.matchMedia('(hover:none) and (pointer:coarse)').matches){e.preventDefault();e.stopImmediatePropagation();}},true);
     stage.addEventListener('touchstart',e=>{
       cancel();if(e.touches.length!==1||dlg.dataset.v410Zoomed==='1')return;
       if(e.target===img)e.preventDefault();
