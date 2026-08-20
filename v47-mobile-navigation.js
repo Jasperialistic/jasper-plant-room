@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.17.0 — clear care actions and recorded status */
+/* Jasper's Plant Room v4.18.0 — dashboard upcoming countdown */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -497,7 +497,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.17.0';
+  const VERSION='v4.18.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -942,11 +942,19 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
     try{await addCare(p,action,'',next);}
     catch(error){console.error('Dashboard care action failed',error);alert(error?.message||'Could not save this care entry.');buttons.forEach(x=>x.disabled=false);button.textContent=type==='water'?'Watered':'Still moist';}
   }
+  function addUpcomingCountdown(card,p){
+    if(statusOf(p)!=='upcoming'||!p.nextCheck)return;
+    const badge=card.querySelector('.status');if(!badge)return;
+    const days=Math.max(1,Math.round((parseDate(p.nextCheck)-parseDate(isoToday()))/86400000));
+    badge.textContent=`Upcoming · ${days} day${days===1?'':'s'}`;
+    badge.setAttribute('aria-label',`Upcoming check in ${days} day${days===1?'':'s'}`);
+  }
   function enhanceQueue(){
     if(!document.body.classList.contains('owner-mode')||typeof db==='undefined')return;
     document.querySelectorAll('#queue .queue-item[data-id]').forEach(card=>{
       if(card.dataset.v413Care==='1')return;
       const p=(db.plants||[]).find(x=>String(x.cloudId)===String(card.dataset.id));if(!p)return;
+      addUpcomingCountdown(card,p);
       card.dataset.v413Care='1';card.classList.add('v413-care-ready');
       const actions=document.createElement('div');actions.className='v413-care-actions';
       actions.innerHTML='<button type="button" class="v413-care-action" data-v413-care="moist">Still moist</button><button type="button" class="v413-care-action" data-v413-care="water">Watered</button><button type="button" class="v413-care-action" data-v413-care="custom">Custom</button>';
