@@ -1,6 +1,6 @@
-/* Jasper's Plant Room v4.22.0 — visual depth refresh */
-const CACHE_NAME='jasper-plant-room-shell-v4.22.0';
-const MIGRATE_FROM='jasper-plant-room-shell-v4.21.0-r1';
+/* Jasper's Plant Room v4.23.0 — desktop image actions */
+const CACHE_NAME='jasper-plant-room-shell-v4.23.0';
+const MIGRATE_FROM='jasper-plant-room-shell-v4.22.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
