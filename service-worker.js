@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.19.0 — conservative PWA app shell */
-const CACHE_NAME='jasper-plant-room-shell-v4.19.0';
+/* Jasper's Plant Room v4.20.0 — conservative PWA app shell */
+const CACHE_NAME='jasper-plant-room-shell-v4.20.0';
 const MIGRATE_FROM='jasper-plant-room-shell-v4.14.1';
 const SHELL=[
   './',
@@ -8,7 +8,7 @@ const SHELL=[
   './pwa-icon-512.png',
   './apple-touch-icon.png',
   './v46-pwa-shell.js?v=4.15.0',
-  './v47-mobile-navigation.js?v=4.19.0',
+  './v47-mobile-navigation.js?v=4.20.0',
   './v25-photo-viewer.js?v=3.8.0',
   './v30-growth-gallery.js?v=3.0.0'
 ];
