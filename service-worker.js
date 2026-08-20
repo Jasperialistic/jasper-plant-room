@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.31.0 — mobile photo double-tap zoom */
-const CACHE_NAME='jasper-plant-room-shell-v4.31.0';
+/* Jasper's Plant Room v4.32.0 — seamless mobile photo carousel */
+const CACHE_NAME='jasper-plant-room-shell-v4.32.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
