@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.18.0 — dashboard upcoming countdown */
+/* Jasper's Plant Room v4.19.0 — dashboard growth-update age */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -495,9 +495,26 @@
   renderSpeciesCounters();
 })();
 
+/* Dashboard date card: age of the newest Growth Progress photo. */
+(function(){
+  function renderGrowthUpdateAge(){
+    const target=document.getElementById('snapshotText');if(!target||typeof db==='undefined')return;
+    const dates=(db.photos||[]).filter(photo=>photo.kind==='growth').map(photo=>String(photo.photo_date||photo.created_at||'').slice(0,10)).filter(Boolean).sort();
+    if(!dates.length){target.textContent='No growth photos yet';target.removeAttribute('title');return;}
+    const latest=dates[dates.length-1],days=Math.max(0,Math.round((parseDate(isoToday())-parseDate(latest))/86400000));
+    const age=days===0?'Today':days===1?'Yesterday':`${days} days ago`;
+    target.textContent=`Last growth update · ${age}`;
+    target.title=`Newest Growth Progress photo: ${fmt(latest)}`;
+  }
+  if(typeof renderStats==='function'){
+    const previous=renderStats;renderStats=function(){const result=previous.apply(this,arguments);renderGrowthUpdateAge();return result;};
+  }
+  renderGrowthUpdateAge();
+})();
+
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.18.0';
+  const VERSION='v4.19.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
