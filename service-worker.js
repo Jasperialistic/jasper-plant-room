@@ -1,6 +1,6 @@
-/* Jasper's Plant Room v4.27.0 — integrated mobile care summary */
-const CACHE_NAME='jasper-plant-room-shell-v4.27.0';
-const MIGRATE_FROM='jasper-plant-room-shell-v4.26.0';
+/* Jasper's Plant Room v4.28.0 — compact mobile care actions */
+const CACHE_NAME='jasper-plant-room-shell-v4.28.0';
+const MIGRATE_FROM='jasper-plant-room-shell-v4.27.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
