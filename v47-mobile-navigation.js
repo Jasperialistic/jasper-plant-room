@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.31.0 — mobile photo double-tap zoom */
+/* Jasper's Plant Room v4.32.0 — seamless mobile photo carousel */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -514,7 +514,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.31.0';
+  const VERSION='v4.32.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -1898,7 +1898,7 @@ body{
 
 /* Jasper's Plant Room v4.29.0 — built-in patch notes. */
 (function(){
-  const releases=[{"version":"4.31.0","date":"20 Aug 2026","title":"Mobile photo double-tap zoom","changes":["Added double-tap reset for zoomed Gallery and Growth Progress photos.","Added app-style double-tap zoom into the tapped area when the photo is at its default scale.","Preserved pinch, pan, swipe navigation and long-press image actions."]},{"version":"4.30.0","date":"20 Aug 2026","title":"Desktop Patch Notes and reliable updates","changes":["Added an explicit Patch notes entry to the desktop account menu.","Made the desktop version badge open Patch Notes directly.","Fixed skipped-release service-worker upgrades so an older desktop cache cannot remain stuck indefinitely."]},{"version":"4.29.0","date":"20 Aug 2026","title":"Built-in patch notes","changes":["Added Patch notes to the top-right account and backup menu.","Added this notepad-style release history from the newest update back to the original Plant Room build."]},{"version":"4.28.0","date":"20 Aug 2026","title":"Compact mobile care actions","changes":["Replaced bulky Care buttons with compact 44px Moist, Watered and Reservoir actions.","Changed Add custom entry to a square ＋ button.","Moved Edit details to a pencil action in the Details heading.","Removed duplicate Last care and Next check rows from the mobile Care tab."]},{"version":"4.27.0","date":"20 Aug 2026","title":"Integrated Details care summary","changes":["Removed the floating care summary dock.","Placed Last recorded and Next check at the bottom of Details.","Compressed mobile Details into a two-column layout so the summary fits in the first view."]},{"version":"4.26.0","date":"20 Aug 2026","title":"Carousel surface polish","changes":["Separated carousel tabs into bordered, rounded surfaces.","Added progressive opacity, brightness and seam shadows while swiping.","Fixed unreliable care-summary rendering caused by the transformed carousel track."]},{"version":"4.25.0","date":"20 Aug 2026","title":"Fluid mobile profile carousel","changes":["Rebuilt Gallery, Growth, Details and Care as a continuous finger-following carousel.","Added smooth settling, direction locking, tab-indicator tracking and edge resistance."]},{"version":"4.24.0","date":"20 Aug 2026","title":"Mobile profile gestures","changes":["Added left and right swipe navigation between plant-profile tabs.","Reset each tab to the top when selected.","Reduced the left-edge back gesture area to avoid interfering with tab swipes."]},{"version":"4.23.0","date":"20 Aug 2026","title":"Desktop image actions","changes":["Restored the normal desktop right-click image menu for gallery and growth photos.","Kept mobile Save / Share controls and long-press actions intact."]},{"version":"4.22.0","date":"20 Aug 2026","title":"Visual depth pass","changes":["Added restrained shadows, layered surfaces, highlights and background texture.","Improved card, modal, form, image and hover depth without changing the dark botanical theme."]},{"version":"4.21.0","date":"20 Aug 2026","title":"Growing-zone deletion","changes":["Added Delete zone inside the zone editor.","Blocked deletion while plants are still assigned to the zone.","Added guarded cleanup of the zone label photo."]},{"version":"4.20.0","date":"20 Aug 2026","title":"Location label photos","changes":["Added label-photo upload and replacement to Edit Location.","Kept location images as simple labels without opening the photo viewer."]},{"version":"4.19.0","date":"20 Aug 2026","title":"Dashboard timing information","changes":["Added day countdowns to Upcoming care labels.","Replaced Collection snapshot with the age of the latest Growth Progress update."]},{"version":"4.18.0","date":"19 Aug 2026","title":"Dashboard filters and header cleanup","changes":["Added plant-group counters and dashboard filtering.","Used registered plant groups for consistent filters.","Simplified header controls, species labels and update prompts."]},{"version":"4.17.0","date":"19 Aug 2026","title":"Clearer care state","changes":["Separated saved Last recorded / Next check information from buttons that create new care actions.","Clarified care status wording and Upcoming dates."]},{"version":"4.16.0","date":"19 Aug 2026","title":"Dashboard quick care","changes":["Added one-tap Moist, Watered and Custom actions to dashboard care cards.","Added compact plant-group counters and refined desktop dashboard shortcuts."]},{"version":"4.15.0","date":"19 Aug 2026","title":"Reliable app updates","changes":["Improved stale-cache detection and update prompting.","Strengthened PWA refresh behaviour after new releases."]},{"version":"4.14.0","date":"19 Aug 2026","title":"Growth captions","changes":["Added editing for Growth Progress photo captions.","Improved gallery state cleanup after closing viewers."]},{"version":"4.13.0","date":"19 Aug 2026","title":"Mobile image actions","changes":["Added reliable long-press Save, Share and Copy actions for photos.","Prevented Safari text-selection menus from replacing image actions."]},{"version":"4.12.0","date":"19 Aug 2026","title":"Photo zoom and pan","changes":["Added pinch zoom and one-finger panning to enlarged gallery and growth photos.","Improved nested photo-viewer gesture handling."]},{"version":"4.11.0","date":"19 Aug 2026","title":"Structured plant-profile tabs","changes":["Introduced sticky Gallery, Growth, Details and Care sections on mobile.","Reorganised plant information and actions into clearer app-style panels."]},{"version":"4.10.0","date":"19 Aug 2026","title":"Mobile modal reliability","changes":["Fixed nested swipe modal freezes and two-level navigation problems.","Improved close-button cleanup and cleared viewer scroll state."]},{"version":"4.9.0","date":"19 Aug 2026","title":"Edge-back navigation","changes":["Added app-style edge-swipe back for plant profiles and full-screen photos.","Preserved separate back levels between photo viewer and plant profile."]},{"version":"4.8.0","date":"19 Aug 2026","title":"Plant views and safe areas","changes":["Added List, Compact grid and Large grid plant views.","Added iPhone Dynamic Island and safe-area spacing fixes.","Stored separate mobile and desktop view preferences."]},{"version":"4.7.0","date":"19 Aug 2026","title":"App-style mobile navigation","changes":["Added the Home, Plants, ＋, Zones and More bottom navigation.","Added owner quick actions for plants, growth photos and care entries."]},{"version":"4.6.0","date":"19 Aug 2026","title":"Installable Plant Room app","changes":["Added the PWA manifest, app icons and conservative offline shell.","Enabled standalone home-screen installation on supported phones."]},{"version":"4.5.2","date":"19 Aug 2026","title":"Compact zone light ratings","changes":["Simplified measured location-light ratings into a compact star display."]},{"version":"4.5.1","date":"19 Aug 2026","title":"Zone light stars","changes":["Converted auto-filled growing-zone light readings into easy star ratings."]},{"version":"4.5.0","date":"19 Aug 2026","title":"Measured zone lighting","changes":["Linked growing zones to measured PPFD light values.","Allowed Add Plant to inherit the selected zone's lighting."]},{"version":"4.4.1","date":"19 Aug 2026","title":"Preset stability fix","changes":["Fixed the Light preset editor render loop."]},{"version":"4.4.0","date":"19 Aug 2026","title":"Add Plant presets","changes":["Added reusable plant setup presets.","Added PPFD-based lighting choices to Add Plant."]},{"version":"4.3.3","date":"19 Aug 2026","title":"Desktop gallery modal","changes":["Converted desktop gallery controls into a true modal surface."]},{"version":"4.3.2","date":"19 Aug 2026","title":"Gallery menu stacking fix","changes":["Fixed desktop gallery menus appearing behind the plant dialog."]},{"version":"4.3.1","date":"19 Aug 2026","title":"Cleaner desktop photo controls","changes":["Consolidated desktop gallery photo commands into a compact menu."]},{"version":"4.3.0","date":"19 Aug 2026","title":"Desktop gallery workflow","changes":["Added drag reordering on desktop.","Added mouse-wheel browsing for enlarged photos."]},{"version":"4.2.1","date":"19 Aug 2026","title":"Editor access refinements","changes":["Improved mobile access to presets and repositioned desktop editing controls."]},{"version":"4.2.0","date":"19 Aug 2026","title":"Plant editor polish","changes":["Polished structured presets and mobile editing access."]},{"version":"4.1.0","date":"19 Aug 2026","title":"Full plant editor","changes":["Added the complete structured editor for plant identity, pot, medium, lighting, location and care settings."]},{"version":"4.0.0","date":"19 Aug 2026","title":"App-like mobile plant profile","changes":["Rebuilt the mobile plant page with an app-style full-screen profile.","Improved mobile presentation of galleries, growth history and plant details."]},{"version":"3.9.0","date":"19 Aug 2026","title":"Mobile gallery management","changes":["Added app-like drag reordering for mobile galleries.","Improved gallery asset loading and cache refresh."]},{"version":"3.8.0","date":"19 Aug 2026","title":"Mobile plant and viewer UX","changes":["Added tap-outside closing, sticky mobile headers and safer full-screen photo controls.","Added native Save / Share actions to gallery and growth viewers."]},{"version":"3.7.0","date":"19 Aug 2026","title":"Visual evidence bridge","changes":["Added temporary visual-evidence support for ChatGPT-assisted plant review."]},{"version":"3.6.1","date":"19 Aug 2026","title":"AI review reuse","changes":["Reused unchanged AI plant reviews instead of regenerating identical results."]},{"version":"3.6.0","date":"19 Aug 2026","title":"AI visual review","changes":["Added an AI Review action to individual plant profiles."]},{"version":"3.5.0","date":"19 Aug 2026","title":"Focused Telegram references","changes":["Created focused plant-reference packets for Telegram workflows."]},{"version":"3.4.0","date":"19 Aug 2026","title":"Plant aliases and shortcut search","changes":["Added alternate plant names and quicker search matching."]},{"version":"3.3.0","date":"19 Aug 2026","title":"Inbound Telegram archive","changes":["Added an archive for plant material received through Telegram."]},{"version":"3.2.0","date":"19 Aug 2026","title":"JasperJungleBot integration","changes":["Added direct sending through JasperJungleBot."]},{"version":"3.1.0","date":"19 Aug 2026","title":"Direct Telegram sharing","changes":["Added a direct Telegram share action for plant profiles."]},{"version":"3.0.0","date":"19 Aug 2026","title":"Compact growth timeline","changes":["Added the chronological Growth Progress photo gallery."]},{"version":"2.9.0","date":"19 Aug 2026","title":"Actual photo sharing","changes":["Allowed original plant photos to be included in sharing workflows."]},{"version":"2.8.0","date":"19 Aug 2026","title":"Share with ChatGPT","changes":["Added a plant-profile workflow for sharing plant context with ChatGPT."]},{"version":"2.7.0","date":"18 Aug 2026","title":"Permanent bundled-photo deletion","changes":["Allowed removed bundled gallery photos to be permanently deleted."]},{"version":"2.6.0","date":"18 Aug 2026","title":"Desktop photo fit","changes":["Improved photo sizing and containment on desktop."]},{"version":"2.5.0","date":"18 Aug 2026","title":"Photo viewer top-layer fix","changes":["Fixed the full-screen album viewer appearing below other dialogs."]},{"version":"2.4.0","date":"18 Aug 2026","title":"Album photo viewer","changes":["Added the full album-style plant photo viewer."]},{"version":"2.3.0","date":"18 Aug 2026","title":"Owner Add Plant","changes":["Added the owner-only Add Plant tab and creation workflow."]},{"version":"2.2.0","date":"18 Aug 2026","title":"Gallery manager and growing zones","changes":["Added gallery management tools.","Added interactive growing-zone cards and editing."]},{"version":"2.1.0","date":"18 Aug 2026","title":"Thumbnail and tab fixes","changes":["Added gallery thumbnail selection.","Fixed main section tab navigation."]},{"version":"2.0.0","date":"18 Aug 2026","title":"Cloud-hosted Plant Room","changes":["Prepared Plant Room for GitHub Pages.","Added the reusable UI patch deployment workflow."]},{"version":"1.0.0","date":"18 Aug 2026","title":"Initial Plant Room","changes":["Created the original dark botanical dashboard.","Added the plant collection, care queue, care log, locations and local data import / export foundation."]}];
+  const releases=[{"version":"4.32.0","date":"20 Aug 2026","title":"Seamless mobile photo carousel","changes":["Rebuilt enlarged Gallery and Growth Progress swiping as a continuous follow-your-finger carousel.","Added softly framed photo edges, depth shadows and a fade between neighbouring photos.","Preserved double-tap zoom, pinch, pan, long-press actions and edge-swipe back."]},{"version":"4.31.0","date":"20 Aug 2026","title":"Mobile photo double-tap zoom","changes":["Added double-tap reset for zoomed Gallery and Growth Progress photos.","Added app-style double-tap zoom into the tapped area when the photo is at its default scale.","Preserved pinch, pan, swipe navigation and long-press image actions."]},{"version":"4.30.0","date":"20 Aug 2026","title":"Desktop Patch Notes and reliable updates","changes":["Added an explicit Patch notes entry to the desktop account menu.","Made the desktop version badge open Patch Notes directly.","Fixed skipped-release service-worker upgrades so an older desktop cache cannot remain stuck indefinitely."]},{"version":"4.29.0","date":"20 Aug 2026","title":"Built-in patch notes","changes":["Added Patch notes to the top-right account and backup menu.","Added this notepad-style release history from the newest update back to the original Plant Room build."]},{"version":"4.28.0","date":"20 Aug 2026","title":"Compact mobile care actions","changes":["Replaced bulky Care buttons with compact 44px Moist, Watered and Reservoir actions.","Changed Add custom entry to a square ＋ button.","Moved Edit details to a pencil action in the Details heading.","Removed duplicate Last care and Next check rows from the mobile Care tab."]},{"version":"4.27.0","date":"20 Aug 2026","title":"Integrated Details care summary","changes":["Removed the floating care summary dock.","Placed Last recorded and Next check at the bottom of Details.","Compressed mobile Details into a two-column layout so the summary fits in the first view."]},{"version":"4.26.0","date":"20 Aug 2026","title":"Carousel surface polish","changes":["Separated carousel tabs into bordered, rounded surfaces.","Added progressive opacity, brightness and seam shadows while swiping.","Fixed unreliable care-summary rendering caused by the transformed carousel track."]},{"version":"4.25.0","date":"20 Aug 2026","title":"Fluid mobile profile carousel","changes":["Rebuilt Gallery, Growth, Details and Care as a continuous finger-following carousel.","Added smooth settling, direction locking, tab-indicator tracking and edge resistance."]},{"version":"4.24.0","date":"20 Aug 2026","title":"Mobile profile gestures","changes":["Added left and right swipe navigation between plant-profile tabs.","Reset each tab to the top when selected.","Reduced the left-edge back gesture area to avoid interfering with tab swipes."]},{"version":"4.23.0","date":"20 Aug 2026","title":"Desktop image actions","changes":["Restored the normal desktop right-click image menu for gallery and growth photos.","Kept mobile Save / Share controls and long-press actions intact."]},{"version":"4.22.0","date":"20 Aug 2026","title":"Visual depth pass","changes":["Added restrained shadows, layered surfaces, highlights and background texture.","Improved card, modal, form, image and hover depth without changing the dark botanical theme."]},{"version":"4.21.0","date":"20 Aug 2026","title":"Growing-zone deletion","changes":["Added Delete zone inside the zone editor.","Blocked deletion while plants are still assigned to the zone.","Added guarded cleanup of the zone label photo."]},{"version":"4.20.0","date":"20 Aug 2026","title":"Location label photos","changes":["Added label-photo upload and replacement to Edit Location.","Kept location images as simple labels without opening the photo viewer."]},{"version":"4.19.0","date":"20 Aug 2026","title":"Dashboard timing information","changes":["Added day countdowns to Upcoming care labels.","Replaced Collection snapshot with the age of the latest Growth Progress update."]},{"version":"4.18.0","date":"19 Aug 2026","title":"Dashboard filters and header cleanup","changes":["Added plant-group counters and dashboard filtering.","Used registered plant groups for consistent filters.","Simplified header controls, species labels and update prompts."]},{"version":"4.17.0","date":"19 Aug 2026","title":"Clearer care state","changes":["Separated saved Last recorded / Next check information from buttons that create new care actions.","Clarified care status wording and Upcoming dates."]},{"version":"4.16.0","date":"19 Aug 2026","title":"Dashboard quick care","changes":["Added one-tap Moist, Watered and Custom actions to dashboard care cards.","Added compact plant-group counters and refined desktop dashboard shortcuts."]},{"version":"4.15.0","date":"19 Aug 2026","title":"Reliable app updates","changes":["Improved stale-cache detection and update prompting.","Strengthened PWA refresh behaviour after new releases."]},{"version":"4.14.0","date":"19 Aug 2026","title":"Growth captions","changes":["Added editing for Growth Progress photo captions.","Improved gallery state cleanup after closing viewers."]},{"version":"4.13.0","date":"19 Aug 2026","title":"Mobile image actions","changes":["Added reliable long-press Save, Share and Copy actions for photos.","Prevented Safari text-selection menus from replacing image actions."]},{"version":"4.12.0","date":"19 Aug 2026","title":"Photo zoom and pan","changes":["Added pinch zoom and one-finger panning to enlarged gallery and growth photos.","Improved nested photo-viewer gesture handling."]},{"version":"4.11.0","date":"19 Aug 2026","title":"Structured plant-profile tabs","changes":["Introduced sticky Gallery, Growth, Details and Care sections on mobile.","Reorganised plant information and actions into clearer app-style panels."]},{"version":"4.10.0","date":"19 Aug 2026","title":"Mobile modal reliability","changes":["Fixed nested swipe modal freezes and two-level navigation problems.","Improved close-button cleanup and cleared viewer scroll state."]},{"version":"4.9.0","date":"19 Aug 2026","title":"Edge-back navigation","changes":["Added app-style edge-swipe back for plant profiles and full-screen photos.","Preserved separate back levels between photo viewer and plant profile."]},{"version":"4.8.0","date":"19 Aug 2026","title":"Plant views and safe areas","changes":["Added List, Compact grid and Large grid plant views.","Added iPhone Dynamic Island and safe-area spacing fixes.","Stored separate mobile and desktop view preferences."]},{"version":"4.7.0","date":"19 Aug 2026","title":"App-style mobile navigation","changes":["Added the Home, Plants, ＋, Zones and More bottom navigation.","Added owner quick actions for plants, growth photos and care entries."]},{"version":"4.6.0","date":"19 Aug 2026","title":"Installable Plant Room app","changes":["Added the PWA manifest, app icons and conservative offline shell.","Enabled standalone home-screen installation on supported phones."]},{"version":"4.5.2","date":"19 Aug 2026","title":"Compact zone light ratings","changes":["Simplified measured location-light ratings into a compact star display."]},{"version":"4.5.1","date":"19 Aug 2026","title":"Zone light stars","changes":["Converted auto-filled growing-zone light readings into easy star ratings."]},{"version":"4.5.0","date":"19 Aug 2026","title":"Measured zone lighting","changes":["Linked growing zones to measured PPFD light values.","Allowed Add Plant to inherit the selected zone's lighting."]},{"version":"4.4.1","date":"19 Aug 2026","title":"Preset stability fix","changes":["Fixed the Light preset editor render loop."]},{"version":"4.4.0","date":"19 Aug 2026","title":"Add Plant presets","changes":["Added reusable plant setup presets.","Added PPFD-based lighting choices to Add Plant."]},{"version":"4.3.3","date":"19 Aug 2026","title":"Desktop gallery modal","changes":["Converted desktop gallery controls into a true modal surface."]},{"version":"4.3.2","date":"19 Aug 2026","title":"Gallery menu stacking fix","changes":["Fixed desktop gallery menus appearing behind the plant dialog."]},{"version":"4.3.1","date":"19 Aug 2026","title":"Cleaner desktop photo controls","changes":["Consolidated desktop gallery photo commands into a compact menu."]},{"version":"4.3.0","date":"19 Aug 2026","title":"Desktop gallery workflow","changes":["Added drag reordering on desktop.","Added mouse-wheel browsing for enlarged photos."]},{"version":"4.2.1","date":"19 Aug 2026","title":"Editor access refinements","changes":["Improved mobile access to presets and repositioned desktop editing controls."]},{"version":"4.2.0","date":"19 Aug 2026","title":"Plant editor polish","changes":["Polished structured presets and mobile editing access."]},{"version":"4.1.0","date":"19 Aug 2026","title":"Full plant editor","changes":["Added the complete structured editor for plant identity, pot, medium, lighting, location and care settings."]},{"version":"4.0.0","date":"19 Aug 2026","title":"App-like mobile plant profile","changes":["Rebuilt the mobile plant page with an app-style full-screen profile.","Improved mobile presentation of galleries, growth history and plant details."]},{"version":"3.9.0","date":"19 Aug 2026","title":"Mobile gallery management","changes":["Added app-like drag reordering for mobile galleries.","Improved gallery asset loading and cache refresh."]},{"version":"3.8.0","date":"19 Aug 2026","title":"Mobile plant and viewer UX","changes":["Added tap-outside closing, sticky mobile headers and safer full-screen photo controls.","Added native Save / Share actions to gallery and growth viewers."]},{"version":"3.7.0","date":"19 Aug 2026","title":"Visual evidence bridge","changes":["Added temporary visual-evidence support for ChatGPT-assisted plant review."]},{"version":"3.6.1","date":"19 Aug 2026","title":"AI review reuse","changes":["Reused unchanged AI plant reviews instead of regenerating identical results."]},{"version":"3.6.0","date":"19 Aug 2026","title":"AI visual review","changes":["Added an AI Review action to individual plant profiles."]},{"version":"3.5.0","date":"19 Aug 2026","title":"Focused Telegram references","changes":["Created focused plant-reference packets for Telegram workflows."]},{"version":"3.4.0","date":"19 Aug 2026","title":"Plant aliases and shortcut search","changes":["Added alternate plant names and quicker search matching."]},{"version":"3.3.0","date":"19 Aug 2026","title":"Inbound Telegram archive","changes":["Added an archive for plant material received through Telegram."]},{"version":"3.2.0","date":"19 Aug 2026","title":"JasperJungleBot integration","changes":["Added direct sending through JasperJungleBot."]},{"version":"3.1.0","date":"19 Aug 2026","title":"Direct Telegram sharing","changes":["Added a direct Telegram share action for plant profiles."]},{"version":"3.0.0","date":"19 Aug 2026","title":"Compact growth timeline","changes":["Added the chronological Growth Progress photo gallery."]},{"version":"2.9.0","date":"19 Aug 2026","title":"Actual photo sharing","changes":["Allowed original plant photos to be included in sharing workflows."]},{"version":"2.8.0","date":"19 Aug 2026","title":"Share with ChatGPT","changes":["Added a plant-profile workflow for sharing plant context with ChatGPT."]},{"version":"2.7.0","date":"18 Aug 2026","title":"Permanent bundled-photo deletion","changes":["Allowed removed bundled gallery photos to be permanently deleted."]},{"version":"2.6.0","date":"18 Aug 2026","title":"Desktop photo fit","changes":["Improved photo sizing and containment on desktop."]},{"version":"2.5.0","date":"18 Aug 2026","title":"Photo viewer top-layer fix","changes":["Fixed the full-screen album viewer appearing below other dialogs."]},{"version":"2.4.0","date":"18 Aug 2026","title":"Album photo viewer","changes":["Added the full album-style plant photo viewer."]},{"version":"2.3.0","date":"18 Aug 2026","title":"Owner Add Plant","changes":["Added the owner-only Add Plant tab and creation workflow."]},{"version":"2.2.0","date":"18 Aug 2026","title":"Gallery manager and growing zones","changes":["Added gallery management tools.","Added interactive growing-zone cards and editing."]},{"version":"2.1.0","date":"18 Aug 2026","title":"Thumbnail and tab fixes","changes":["Added gallery thumbnail selection.","Fixed main section tab navigation."]},{"version":"2.0.0","date":"18 Aug 2026","title":"Cloud-hosted Plant Room","changes":["Prepared Plant Room for GitHub Pages.","Added the reusable UI patch deployment workflow."]},{"version":"1.0.0","date":"18 Aug 2026","title":"Initial Plant Room","changes":["Created the original dark botanical dashboard.","Added the plant collection, care queue, care log, locations and local data import / export foundation."]}];
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
@@ -2060,4 +2060,221 @@ body{
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});
   new MutationObserver(bind).observe(document.body,{childList:true,subtree:true});
   if(typeof mq.addEventListener==='function')mq.addEventListener('change',bind);
+})();
+
+
+/* Jasper's Plant Room v4.32.0 — seamless mobile photo carousel. */
+(function v432Carousel(){
+  const mq=window.matchMedia('(max-width:700px)');
+  const reduceMotion=()=>window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let growthHint=null;
+
+  const style=document.createElement('style');
+  style.id='v432PhotoCarouselStyles';
+  style.textContent=`
+@media(max-width:700px){
+  #photoLightboxStage,#growthViewStage{isolation:isolate}
+  #photoLightboxStage .v432-photo-rail,#growthViewStage .v432-photo-rail{
+    position:absolute;inset:0;width:300%;height:100%;display:flex;z-index:0;
+    transform:translate3d(calc(-33.333333% + var(--v432-drag-x,0px)),0,0);
+    will-change:transform
+  }
+  #photoLightboxStage .v432-photo-rail.v432-dragging,#growthViewStage .v432-photo-rail.v432-dragging{transition:none}
+  #photoLightboxStage .v432-photo-rail.v432-snapping,#growthViewStage .v432-photo-rail.v432-snapping{
+    transition:transform 255ms cubic-bezier(.22,.72,.2,1)
+  }
+  #photoLightboxStage .v432-photo-slide,#growthViewStage .v432-photo-slide{
+    position:relative;flex:0 0 33.333333%;width:33.333333%;height:100%;
+    display:grid;place-items:center;box-sizing:border-box;padding:6px 9px;overflow:hidden
+  }
+  #photoLightboxStage .v432-photo-slide::after,#growthViewStage .v432-photo-slide::after{
+    content:"";position:absolute;inset:4% 0;pointer-events:none;
+    box-shadow:inset 18px 0 24px -25px rgba(213,190,133,.52),inset -18px 0 24px -25px rgba(213,190,133,.52);
+    opacity:.72
+  }
+  #photoLightboxStage .v432-photo-slide img,#growthViewStage .v432-photo-slide img{
+    display:block;width:auto!important;height:auto!important;
+    max-width:calc(100% - 4px)!important;max-height:calc(100% - 8px)!important;
+    object-fit:contain;border:1px solid rgba(222,211,176,.24)!important;border-radius:11px!important;
+    box-shadow:0 18px 42px rgba(0,0,0,.58),0 3px 12px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.035);
+    transition:opacity 210ms ease,box-shadow 210ms ease;box-sizing:border-box
+  }
+  #photoLightboxStage .v432-photo-prev img,#growthViewStage .v432-photo-prev img{opacity:var(--v432-prev-opacity,.72)}
+  #photoLightboxStage .v432-photo-current img,#growthViewStage .v432-photo-current img{opacity:var(--v432-current-opacity,1)}
+  #photoLightboxStage .v432-photo-next img,#growthViewStage .v432-photo-next img{opacity:var(--v432-next-opacity,.72)}
+  #photoLightboxStage .v432-photo-rail.v432-dragging img,#growthViewStage .v432-photo-rail.v432-dragging img{transition:none}
+  #photoLightboxStage .v432-photo-clone,#growthViewStage .v432-photo-clone{
+    pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none
+  }
+  #photoLightboxStage .photo-lightbox-nav,#growthViewStage .growth-view-nav{z-index:6}
+  #photoLightbox.v410-zoomed .v432-photo-rail,#growthPhotoViewer.v410-zoomed .v432-photo-rail{
+    transform:translate3d(-33.333333%,0,0)!important;transition:none!important
+  }
+}
+@media(max-width:700px) and (prefers-reduced-motion:reduce){
+  #photoLightboxStage .v432-photo-rail,#growthViewStage .v432-photo-rail,
+  #photoLightboxStage .v432-photo-slide img,#growthViewStage .v432-photo-slide img{transition:none!important}
+}
+`;
+  document.head.appendChild(style);
+
+  const absolute=url=>{try{return new URL(url||'',location.href).href;}catch(_){return url||'';}};
+  const growthItems=p=>{
+    try{return (cloudPhotos(p,'growth')||[]).slice().sort((a,b)=>
+      String(b.photo_date||'').localeCompare(String(a.photo_date||''))||
+      String(b.created_at||'').localeCompare(String(a.created_at||''))
+    );}catch(_){return [];}
+  };
+  const galleryModel=()=>{
+    try{
+      if(typeof photoLightboxState==='undefined'||typeof db==='undefined')return null;
+      const state=photoLightboxState,n=state.keys?.length||0;
+      const p=(db.plants||[]).find(x=>String(x.cloudId)===String(state.plantId));
+      if(!p||!n)return null;
+      const urls=state.keys.map(key=>galleryItemByKey(p,key)?.url||'');
+      return {urls,index:Math.max(0,Math.min(n-1,state.index||0))};
+    }catch(_){return null;}
+  };
+  const growthModel=img=>{
+    try{
+      if(typeof db==='undefined')return null;
+      const current=absolute(img.currentSrc||img.src),plants=db.plants||[];
+      let p=growthHint&&plants.find(x=>String(x.cloudId)===String(growthHint.plantId));
+      let items=p?growthItems(p):[];
+      if(!items.some(x=>absolute(x.url)===current)){
+        p=plants.find(plant=>growthItems(plant).some(x=>absolute(x.url)===current));
+        items=p?growthItems(p):[];
+      }
+      if(!p||!items.length)return null;
+      let index=items.findIndex(x=>absolute(x.url)===current);
+      const counter=document.getElementById('growthViewCounter')?.textContent||'';
+      const match=counter.match(/(\d+)\s*\/\s*(\d+)/);
+      if(match&&Number(match[2])===items.length)index=Number(match[1])-1;
+      if(index<0&&growthHint)index=items.findIndex(x=>String(x.id)===String(growthHint.id));
+      if(index<0)index=0;
+      growthHint={plantId:p.cloudId,id:items[index]?.id};
+      return {urls:items.map(x=>x.url||''),index};
+    }catch(_){return null;}
+  };
+
+  document.addEventListener('click',event=>{
+    const button=event.target.closest?.('[data-growth-view]');
+    if(!button||typeof db==='undefined')return;
+    const id=button.dataset.growthView;
+    for(const p of db.plants||[]){
+      const items=growthItems(p),index=items.findIndex(x=>String(x.id)===String(id));
+      if(index>=0){growthHint={plantId:p.cloudId,id};break;}
+    }
+  },true);
+
+  function enhance(dlg){
+    if(!dlg||dlg.dataset.v432Carousel==='1')return;
+    const stage=dlg.querySelector('#photoLightboxStage,#growthViewStage');
+    const img=dlg.querySelector('#photoLightboxImg,#growthViewImg');
+    if(!stage||!img)return;
+    dlg.dataset.v432Carousel='1';
+
+    const rail=document.createElement('div');
+    rail.className='v432-photo-rail';
+    rail.innerHTML='<div class="v432-photo-slide v432-photo-prev"><img class="v432-photo-clone" alt="" aria-hidden="true"></div><div class="v432-photo-slide v432-photo-current"></div><div class="v432-photo-slide v432-photo-next"><img class="v432-photo-clone" alt="" aria-hidden="true"></div>';
+    stage.insertBefore(rail,stage.firstChild);
+    rail.querySelector('.v432-photo-current').appendChild(img);
+    const prevImg=rail.querySelector('.v432-photo-prev img'),nextImg=rail.querySelector('.v432-photo-next img');
+    const prevButton=dlg.querySelector('#photoLightboxPrev,#growthViewPrev');
+    const nextButton=dlg.querySelector('#photoLightboxNext,#growthViewNext');
+    let drag=null,timer=0,count=0;
+
+    const setVisual=(dx,progress=0,direction=0)=>{
+      rail.style.setProperty('--v432-drag-x',`${dx}px`);
+      rail.style.setProperty('--v432-current-opacity',String(1-progress*.13));
+      rail.style.setProperty('--v432-prev-opacity',String(direction>0?.72+progress*.28:.72));
+      rail.style.setProperty('--v432-next-opacity',String(direction<0?.72+progress*.28:.72));
+    };
+    const model=()=>dlg.id==='photoLightbox'?galleryModel():growthModel(img);
+    const sync=()=>{
+      const data=model();
+      count=data?.urls?.length||0;rail.dataset.count=String(count);
+      if(!data||!count){prevImg.removeAttribute('src');nextImg.removeAttribute('src');return;}
+      const index=Math.max(0,Math.min(count-1,data.index||0));
+      prevImg.src=data.urls[(index-1+count)%count]||'';
+      nextImg.src=data.urls[(index+1)%count]||'';
+      prevImg.alt='Previous photo';nextImg.alt='Next photo';
+    };
+    const reset=()=>{
+      clearTimeout(timer);drag=null;
+      rail.classList.remove('v432-dragging','v432-snapping');
+      setVisual(0,0,0);
+    };
+    const finishMove=direction=>{
+      const button=direction<0?prevButton:nextButton;
+      button?.click();
+      sync();reset();
+    };
+    const isOpen=()=>dlg.id==='photoLightbox'?!dlg.hidden:!!dlg.open;
+
+    stage.addEventListener('pointerdown',event=>{
+      if(mq.matches&&event.pointerType==='touch')event.stopImmediatePropagation();
+    },true);
+    stage.addEventListener('pointerup',event=>{
+      if(mq.matches&&event.pointerType==='touch')event.stopImmediatePropagation();
+    },true);
+
+    stage.addEventListener('touchstart',event=>{
+      if(!mq.matches||!isOpen()||event.touches.length!==1||count<2)return;
+      if(dlg.dataset.v410Zoomed==='1'||dlg.dataset.v410Pinching==='1')return;
+      const t=event.touches[0];
+      if(t.clientX<=56)return;
+      clearTimeout(timer);rail.classList.remove('v432-snapping');rail.classList.add('v432-dragging');
+      drag={x:t.clientX,y:t.clientY,dx:0,locked:null,lastX:t.clientX,lastTime:performance.now(),velocity:0};
+    },{capture:true,passive:true});
+
+    stage.addEventListener('touchmove',event=>{
+      if(!drag||event.touches.length!==1)return;
+      if(dlg.dataset.v410Zoomed==='1'||dlg.dataset.v410Pinching==='1'){reset();return;}
+      const t=event.touches[0],rawX=t.clientX-drag.x,rawY=t.clientY-drag.y;
+      if(drag.locked===null&&(Math.abs(rawX)>7||Math.abs(rawY)>7)){
+        drag.locked=Math.abs(rawX)>Math.abs(rawY)*1.08?'photo':'vertical';
+        if(drag.locked==='vertical'){reset();return;}
+      }
+      if(drag.locked!=='photo')return;
+      event.preventDefault();event.stopImmediatePropagation();
+      const width=Math.max(1,stage.clientWidth),now=performance.now(),elapsed=Math.max(1,now-drag.lastTime);
+      drag.velocity=(t.clientX-drag.lastX)/elapsed;drag.lastX=t.clientX;drag.lastTime=now;
+      drag.dx=Math.max(-width*1.04,Math.min(width*1.04,rawX));
+      setVisual(drag.dx,Math.min(1,Math.abs(drag.dx)/width),Math.sign(drag.dx));
+    },{capture:true,passive:false});
+
+    stage.addEventListener('touchend',event=>{
+      if(!drag)return;
+      if(dlg.dataset.v410Zoomed==='1'||dlg.dataset.v410Pinching==='1'){reset();return;}
+      const active=drag.locked==='photo',dx=drag.dx,velocity=drag.velocity;
+      drag=null;if(!active){reset();return;}
+      event.preventDefault();event.stopImmediatePropagation();
+      const width=Math.max(1,stage.clientWidth);
+      const commit=Math.abs(dx)>=Math.min(92,width*.19)||Math.abs(velocity)>.48;
+      rail.classList.remove('v432-dragging');
+      if(!commit){
+        rail.classList.add('v432-snapping');setVisual(0,0,0);
+        timer=setTimeout(reset,reduceMotion()?0:270);return;
+      }
+      const direction=dx>0?-1:1,target=dx>0?width:-width;
+      rail.classList.add('v432-snapping');setVisual(target,1,Math.sign(dx));
+      timer=setTimeout(()=>finishMove(direction),reduceMotion()?0:270);
+    },{capture:true,passive:false});
+
+    stage.addEventListener('touchcancel',reset,{capture:true,passive:true});
+    new MutationObserver(sync).observe(img,{attributes:true,attributeFilter:['src']});
+    new MutationObserver(()=>{if(!isOpen())reset();else requestAnimationFrame(sync);})
+      .observe(dlg,{attributes:true,attributeFilter:['hidden','open']});
+    dlg.addEventListener('close',reset);
+    sync();
+  }
+
+  const scan=()=>{
+    enhance(document.getElementById('photoLightbox'));
+    enhance(document.getElementById('growthPhotoViewer'));
+  };
+  scan();
+  new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
+  if(typeof mq.addEventListener==='function')mq.addEventListener('change',()=>{if(!mq.matches)document.querySelectorAll('.v432-photo-rail').forEach(rail=>{rail.classList.remove('v432-dragging','v432-snapping');rail.style.removeProperty('--v432-drag-x');});});
 })();
