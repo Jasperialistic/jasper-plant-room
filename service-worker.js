@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.30.0 — reliable cross-version updates */
-const CACHE_NAME='jasper-plant-room-shell-v4.30.0';
+/* Jasper's Plant Room v4.31.0 — mobile photo double-tap zoom */
+const CACHE_NAME='jasper-plant-room-shell-v4.31.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
