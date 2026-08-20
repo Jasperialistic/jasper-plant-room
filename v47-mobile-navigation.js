@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.21.0 — editable location label photos + zone deletion */
+/* Jasper's Plant Room v4.22.0 — visual depth pass */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -514,7 +514,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.21.0';
+  const VERSION='v4.22.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -1231,4 +1231,152 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
 
   ensureDeleteButton();
   new MutationObserver(ensureDeleteButton).observe(document.body,{childList:true,subtree:true});
+})();
+
+
+/* Jasper's Plant Room v4.22.0 — restrained visual depth and surface texture. */
+(function(){
+  const style=document.createElement('style');
+  style.id='v422VisualDepthStyles';
+  style.textContent=`
+:root{
+  --v422-surface-top:#182b24;
+  --v422-surface-bottom:#101c18;
+  --v422-edge:rgba(115,151,134,.25);
+  --v422-highlight:rgba(255,255,255,.042);
+  --v422-shadow-shallow:0 2px 5px rgba(0,0,0,.22),0 10px 25px rgba(0,0,0,.16);
+  --v422-shadow-medium:0 3px 7px rgba(0,0,0,.28),0 16px 38px rgba(0,0,0,.25);
+  --v422-shadow-deep:0 8px 20px rgba(0,0,0,.38),0 38px 110px rgba(0,0,0,.62);
+}
+body{
+  background-color:#09110e;
+  background-image:
+    radial-gradient(circle at 12% -8%,rgba(66,126,99,.31) 0,transparent 33%),
+    radial-gradient(circle at 92% 21%,rgba(163,122,55,.075) 0,transparent 25%),
+    radial-gradient(circle at 30% 88%,rgba(38,82,65,.12) 0,transparent 29%),
+    repeating-linear-gradient(117deg,rgba(255,255,255,.006) 0 1px,transparent 1px 5px),
+    linear-gradient(180deg,#0c1612 0%,#0b1411 48%,#080f0d 100%);
+  background-attachment:fixed;
+}
+.hero h1,.section-head h2{text-shadow:0 2px 18px rgba(0,0,0,.34)}
+.topbar{
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,.025),0 10px 34px rgba(0,0,0,.22);
+}
+
+.stat{
+  background:linear-gradient(145deg,rgba(25,44,37,.97),rgba(15,27,23,.98));
+  border-color:var(--v422-edge);
+  box-shadow:inset 0 1px 0 var(--v422-highlight),inset 0 -1px 0 rgba(0,0,0,.2),var(--v422-shadow-shallow);
+}
+.queue-item,.timeline-item{
+  background:linear-gradient(145deg,rgba(23,41,34,.97),rgba(15,28,23,.98));
+  border-color:rgba(104,139,122,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 2px 4px rgba(0,0,0,.2),0 9px 22px rgba(0,0,0,.14);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.queue-thumb{
+  outline:1px solid rgba(185,210,198,.12);
+  outline-offset:-1px;
+  box-shadow:0 7px 16px rgba(0,0,0,.32);
+  filter:saturate(1.035) contrast(1.02);
+}
+
+.plant-card,.location-card,.backlog-card,.add-plant-card{
+  background:linear-gradient(150deg,var(--v422-surface-top) 0%,#13231d 47%,var(--v422-surface-bottom) 100%);
+  border-color:var(--v422-edge);
+  box-shadow:inset 0 1px 0 var(--v422-highlight),inset 0 -1px 0 rgba(0,0,0,.25),var(--v422-shadow-medium);
+}
+.plant-card,.location-card{
+  transform:translateZ(0);
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease,filter .2s ease;
+}
+.plant-photo,.location-photo{
+  filter:saturate(1.04) contrast(1.025);
+  border-bottom:1px solid rgba(184,210,197,.11);
+  box-shadow:0 14px 26px -20px rgba(0,0,0,.9);
+}
+.location-card.has-photo .location-card-content{
+  background:linear-gradient(180deg,rgba(25,44,37,.98),rgba(15,27,23,.99));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.027);
+}
+.gallery-tile,.growth-card{
+  border:1px solid rgba(126,157,143,.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 24px rgba(0,0,0,.22);
+}
+
+.status,.chip{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 3px 8px rgba(0,0,0,.14);
+}
+.toolbar input,.toolbar select,label select,label input,label textarea{
+  background:linear-gradient(180deg,#14241e,#101d19);
+  border-color:rgba(102,138,120,.3);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.19),0 1px 0 rgba(255,255,255,.018);
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.toolbar input:focus,.toolbar select:focus,label select:focus,label input:focus,label textarea:focus{
+  border-color:rgba(178,203,190,.52);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.2),0 0 0 3px rgba(107,151,130,.12);
+}
+.dialog,.auth-card{
+  background:linear-gradient(155deg,#162720 0%,#101c18 52%,#0a1210 100%);
+  border-color:rgba(127,166,147,.4);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),var(--v422-shadow-deep);
+}
+.dialog::backdrop{background:rgba(3,7,6,.76);backdrop-filter:blur(7px)}
+.primary{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 6px 15px rgba(0,0,0,.21);
+}
+.ghost{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 4px 11px rgba(0,0,0,.12);
+}
+
+#plantGrid[data-v48-view="list"] .plant-photo{
+  border-right:1px solid rgba(184,210,197,.11);
+  border-bottom:0;
+}
+#plantGrid[data-v48-view="compact"] .plant-photo{border-bottom:0}
+
+@media(hover:hover) and (pointer:fine){
+  .stat:hover{
+    transform:translateY(-1px);
+    border-color:rgba(135,174,155,.35);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 4px 8px rgba(0,0,0,.22),0 14px 30px rgba(0,0,0,.19);
+  }
+  .queue-item:hover{
+    transform:translateY(-2px);
+    border-color:rgba(133,172,153,.42);
+    background:linear-gradient(145deg,rgba(27,48,40,.98),rgba(17,31,26,.99));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 5px 10px rgba(0,0,0,.24),0 16px 32px rgba(0,0,0,.2);
+  }
+  .plant-card:hover,.location-card:hover{
+    transform:translateY(-4px) scale(1.006);
+    border-color:rgba(146,185,166,.5);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 7px 15px rgba(0,0,0,.3),0 24px 50px rgba(0,0,0,.32);
+  }
+}
+
+@media(max-width:700px){
+  body{background-attachment:scroll}
+  .stat{box-shadow:inset 0 1px 0 var(--v422-highlight),0 2px 4px rgba(0,0,0,.2),0 8px 18px rgba(0,0,0,.15)}
+  .queue-item{box-shadow:inset 0 1px 0 rgba(255,255,255,.028),0 2px 4px rgba(0,0,0,.22),0 8px 18px rgba(0,0,0,.16)}
+  .plant-card,.location-card,.backlog-card{box-shadow:inset 0 1px 0 var(--v422-highlight),0 3px 6px rgba(0,0,0,.27),0 13px 27px rgba(0,0,0,.22)}
+  #plantGrid[data-v48-view="compact"]{
+    gap:7px;
+    margin-left:0;
+    margin-right:0;
+  }
+  #plantGrid[data-v48-view="compact"] .plant-card{
+    border:1px solid rgba(115,151,134,.24);
+    border-radius:12px;
+    box-shadow:0 2px 5px rgba(0,0,0,.26),0 10px 20px rgba(0,0,0,.2);
+  }
+  #plantGrid[data-v48-view="compact"] .plant-photo{filter:saturate(1.045) contrast(1.03)}
+  .plant-card:active,.location-card:active,.queue-item:active{transform:scale(.985)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .stat,.queue-item,.plant-card,.location-card{transition:none!important}
+}
+`;
+  document.head.appendChild(style);
 })();
