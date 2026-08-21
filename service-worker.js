@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.34.0 — desktop editor click repair */
-const CACHE_NAME='jasper-plant-room-shell-v4.34.0';
+/* Jasper's Plant Room v4.35.0 — Pon + Aquasoil medium preset */
+const CACHE_NAME='jasper-plant-room-shell-v4.35.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
