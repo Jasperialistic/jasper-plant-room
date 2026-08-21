@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.2.1 — mobile preset access + desktop edit placement */
+/* Jasper's Plant Room v4.36.0 — idle-safe editor access */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
 
@@ -21,10 +21,11 @@
   document.head.appendChild(style);
 
   function syncPresetButtons(){
+    const label=mobileMq.matches?'⌄':'Presets…';
     document.querySelectorAll('#fullPlantEditDialog .v39-preset-select').forEach(select=>{
       const first=select.options?.[0];
-      if(first)first.textContent=mobileMq.matches?'⌄':'Presets…';
-      select.setAttribute('aria-label','Choose preset');
+      if(first&&first.textContent!==label)first.textContent=label;
+      if(select.getAttribute('aria-label')!=='Choose preset')select.setAttribute('aria-label','Choose preset');
     });
   }
 
@@ -54,8 +55,14 @@
   }
 
   function sync(){syncPresetButtons();syncDesktopEdit();}
+  let syncQueued=false;
+  function scheduleSync(){
+    if(syncQueued)return;
+    syncQueued=true;
+    requestAnimationFrame(()=>{syncQueued=false;sync();});
+  }
   sync();
-  const observer=new MutationObserver(()=>requestAnimationFrame(sync));
+  const observer=new MutationObserver(scheduleSync);
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','open']});
   if(typeof mobileMq.addEventListener==='function')mobileMq.addEventListener('change',sync);
 })();
