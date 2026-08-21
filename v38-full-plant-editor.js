@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.1 — full structured plant editor */
+/* Jasper's Plant Room v4.36.0 — cool-running full plant editor */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let editingPlantId=null;
@@ -42,6 +42,8 @@
 #fullPlantEditDialog .full-edit-status{margin-right:auto;color:#91a69d;font-size:11px;line-height:1.3}
 
 @media(max-width:700px){
+  #fullPlantEditDialog::backdrop{backdrop-filter:none;-webkit-backdrop-filter:none}
+  #fullPlantEditDialog .full-edit-head{backdrop-filter:none;-webkit-backdrop-filter:none}
   #fullPlantEditDialog{
     width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;background:#0f1a17;
   }
@@ -271,8 +273,14 @@
     ensureMobileEditButton();
   }
 
+  let syncQueued=false;
+  function scheduleSync(){
+    if(syncQueued)return;
+    syncQueued=true;
+    requestAnimationFrame(()=>{syncQueued=false;sync();});
+  }
   sync();
-  const observer=new MutationObserver(()=>requestAnimationFrame(sync));
+  const observer=new MutationObserver(scheduleSync);
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','class']});
   if(typeof mq.addEventListener==='function')mq.addEventListener('change',sync);
 })();
