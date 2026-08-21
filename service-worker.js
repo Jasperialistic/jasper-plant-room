@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.33.0 — subtle mobile photo controls */
-const CACHE_NAME='jasper-plant-room-shell-v4.33.0';
+/* Jasper's Plant Room v4.34.0 — desktop editor click repair */
+const CACHE_NAME='jasper-plant-room-shell-v4.34.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
