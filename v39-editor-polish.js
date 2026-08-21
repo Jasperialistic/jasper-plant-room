@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.2 — editor preset menus + mobile header edit */
+/* Jasper's Plant Room v4.35.0 — Pon + Aquasoil editor preset */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
 
@@ -6,7 +6,7 @@
     fullEditGroup:['Alocasia','Anthurium','Philodendron','Monstera','Fern','Other'],
     fullEditPotType:['Clear nursery pot with drainage','Nursery pot with drainage','Orchid pot with side holes','Net pot','Self-watering pot','No-drainage vessel'],
     fullEditOuter:['No outer pot','Cache pot with no drainage','Cache pot with drainage + tray','Cache pot with LECA reservoir','Self-watering reservoir cache'],
-    fullEditMedium:['Airy aroid mix','Pon','LECA','Pon + aroid mix','Sphagnum moss','Semi-hydro mix'],
+    fullEditMedium:['Airy aroid mix','Pon','LECA','Pon + Aquasoil','Pon + aroid mix','Sphagnum moss','Semi-hydro mix'],
     fullEditMode:['Top-water to runoff; drain fully','Top-water; no standing reservoir','Bottom-touch reservoir','LECA reservoir','Self-watering wick reservoir','Semi-hydro reservoir','Keep evenly moist; no standing water']
   };
 
