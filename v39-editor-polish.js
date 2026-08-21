@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.35.0 — Pon + Aquasoil editor preset */
+/* Jasper's Plant Room v4.36.0 — efficient editor presets */
 (function(){
   const mobileMq=window.matchMedia('(max-width:700px)');
 
@@ -101,8 +101,14 @@
     ensureMobileHeaderEdit();
   }
 
+  let syncQueued=false;
+  function scheduleSync(){
+    if(syncQueued)return;
+    syncQueued=true;
+    requestAnimationFrame(()=>{syncQueued=false;sync();});
+  }
   sync();
-  const observer=new MutationObserver(()=>requestAnimationFrame(sync));
+  const observer=new MutationObserver(scheduleSync);
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','open']});
   if(typeof mobileMq.addEventListener==='function')mobileMq.addEventListener('change',sync);
 })();
