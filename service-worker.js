@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.38.1 — Add Plant growing-zone repair */
-const CACHE_NAME='jasper-plant-room-shell-v4.38.1';
+/* Jasper's Plant Room v4.38.2 — desktop growing-zone repair */
+const CACHE_NAME='jasper-plant-room-shell-v4.38.2';
 const SHELL=[
   './',
   './manifest.webmanifest',
