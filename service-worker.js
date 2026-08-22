@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.37.1 — last-watered mapping repair */
-const CACHE_NAME='jasper-plant-room-shell-v4.37.1';
+/* Jasper's Plant Room v4.38.0 — per-plant care log */
+const CACHE_NAME='jasper-plant-room-shell-v4.38.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
