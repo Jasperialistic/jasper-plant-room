@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.36.0 — mobile editor performance cleanup */
-const CACHE_NAME='jasper-plant-room-shell-v4.36.0';
+/* Jasper's Plant Room v4.37.0 — last-watered care history */
+const CACHE_NAME='jasper-plant-room-shell-v4.37.0';
 const SHELL=[
   './',
   './manifest.webmanifest',
