@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.38.2 — desktop growing-zone repair */
-const CACHE_NAME='jasper-plant-room-shell-v4.38.2';
+/* Jasper's Plant Room v4.38.3 — desktop image viewer scaling repair */
+const CACHE_NAME='jasper-plant-room-shell-v4.38.3';
 const SHELL=[
   './',
   './manifest.webmanifest',
