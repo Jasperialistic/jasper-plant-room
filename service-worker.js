@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.38.3 — desktop image viewer scaling repair */
-const CACHE_NAME='jasper-plant-room-shell-v4.38.3';
+/* Jasper's Plant Room v4.38.4 — mobile Dashboard startup */
+const CACHE_NAME='jasper-plant-room-shell-v4.38.4';
 const SHELL=[
   './',
   './manifest.webmanifest',
