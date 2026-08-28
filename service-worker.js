@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.38.4 — mobile Dashboard startup */
-const CACHE_NAME='jasper-plant-room-shell-v4.38.4';
+/* Jasper's Plant Room v4.38.5 — mobile owner Dashboard recovery */
+const CACHE_NAME='jasper-plant-room-shell-v4.38.5';
 const SHELL=[
   './',
   './manifest.webmanifest',
