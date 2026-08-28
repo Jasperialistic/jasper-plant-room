@@ -1,8 +1,10 @@
-/* Jasper's Plant Room v4.38.4 — mobile Dashboard startup */
+/* Jasper's Plant Room v4.38.5 — mobile owner Dashboard recovery */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
   let mobileStartupApplied=!mq.matches;
+  let mobileOwnerDashboardReady=!mq.matches;
+  let mobileOwnerLoginPrompted=false;
 
   const icons={
     home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.8 12 3.9l8.5 6.9v8.3a1.4 1.4 0 0 1-1.4 1.4h-4.6v-6.2h-5v6.2H4.9a1.4 1.4 0 0 1-1.4-1.4z"/></svg>',
@@ -172,6 +174,25 @@
     mobileStartupApplied=true;
     tab('dashboard')?.click();
     requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToMobileDashboard('auto')));
+  }
+
+  function isStandaloneApp(){
+    return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  }
+
+  function syncMobileOwnerDashboard(){
+    if(!mq.matches||activeView()!=='dashboard')return;
+    if(isOwner()){
+      if(mobileOwnerDashboardReady)return;
+      mobileOwnerDashboardReady=true;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToMobileDashboard('auto')));
+      return;
+    }
+    if(!isStandaloneApp()||mobileOwnerLoginPrompted)return;
+    const status=String(document.getElementById('cloudStatus')?.textContent||'').trim();
+    if(!/public view/i.test(status))return;
+    mobileOwnerLoginPrompted=true;
+    document.getElementById('adminLoginBtn')?.click();
   }
 
   function syncAddPlantZoneOptions(){
@@ -455,6 +476,7 @@
     applyMobileStartupDashboard();
     syncActiveState();
     syncOwnerVisibility();
+    syncMobileOwnerDashboard();
   }
   function scheduleSync(){
     if(syncQueued)return;
@@ -584,7 +606,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.38.4';
+  const VERSION='v4.38.5';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2127,6 +2149,7 @@ body{
   releases.unshift({"version":"4.38.2","date":"22 Aug 2026","title":"Desktop growing-zone repair","changes":["Fixed the desktop Add New Plant selector when the app’s private zone state was unavailable to the repair layer.","Recovered saved zones from the desktop location filter or rendered zone cards after cloud loading.","Kept Create new growing zone available even before saved zones finish loading."]});
   releases.unshift({"version":"4.38.3","date":"22 Aug 2026","title":"Desktop image viewer scaling repair","changes":["Stopped the mobile three-slide photo carousel from wrapping desktop Gallery and Growth images.","Restored contained desktop image scaling inside the available viewer stage.","Kept all mobile swipe, zoom, shadow and transition behaviour unchanged."]});
   releases.unshift({"version":"4.38.4","date":"28 Aug 2026","title":"Mobile Dashboard startup","changes":["Changed the mobile app’s default landing position from the Home hero to the Dashboard content.","Made overdue plants, upcoming checks and care counters visible immediately after startup.","Renamed the mobile Home navigation item to Dashboard while leaving desktop navigation unchanged."]});
+  releases.unshift({"version":"4.38.5","date":"28 Aug 2026","title":"Mobile owner Dashboard recovery","changes":["Stopped the installed mobile app from silently treating the public alphabetical collection as the owner Dashboard.","Waited for the saved owner session before settling the care queue after startup.","Opened owner sign-in when the installed app has no saved session, then returned to the real overdue and upcoming care Dashboard."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
