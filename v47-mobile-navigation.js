@@ -1,7 +1,8 @@
-/* Jasper's Plant Room v4.38.3 — desktop image viewer scaling repair */
+/* Jasper's Plant Room v4.38.4 — mobile Dashboard startup */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
+  let mobileStartupApplied=!mq.matches;
 
   const icons={
     home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.8 12 3.9l8.5 6.9v8.3a1.4 1.4 0 0 1-1.4 1.4h-4.6v-6.2h-5v6.2H4.9a1.4 1.4 0 0 1-1.4-1.4z"/></svg>',
@@ -72,6 +73,7 @@
 
   body.v47-mobile-nav-ready .shell{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
   body.v47-mobile-nav-ready .tabs{display:none!important}
+  body.v47-mobile-nav-ready #dashboardView{scroll-margin-top:calc(78px + env(safe-area-inset-top))}
 
   .v48-plant-viewbar{margin:0 0 10px}
   .v48-plant-viewbar-label{display:none}
@@ -157,6 +159,21 @@
   function tab(view){return document.querySelector(`.tab[data-view="${view}"]`);}
   function activeView(){return document.querySelector('.tab.active')?.dataset.view||'dashboard';}
 
+  function scrollToMobileDashboard(behavior='auto'){
+    const target=document.getElementById('dashboardView');if(!target)return;
+    const header=document.querySelector('.topbar');
+    const headerHeight=header?.getBoundingClientRect().height||0;
+    const top=Math.max(0,target.getBoundingClientRect().top+window.scrollY-headerHeight-10);
+    window.scrollTo({top,behavior});
+  }
+
+  function applyMobileStartupDashboard(){
+    if(mobileStartupApplied||!mq.matches)return;
+    mobileStartupApplied=true;
+    tab('dashboard')?.click();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>scrollToMobileDashboard('auto')));
+  }
+
   function syncAddPlantZoneOptions(){
     const select=document.getElementById('newPlantLocation');if(!select)return;
     let zones=[];
@@ -215,7 +232,8 @@
       return false;
     }
     source.click();
-    if(view!=='addplant')window.scrollTo({top:0,behavior:'smooth'});
+    if(view==='dashboard'&&mq.matches)setTimeout(()=>scrollToMobileDashboard('smooth'),0);
+    else if(view!=='addplant')window.scrollTo({top:0,behavior:'smooth'});
     scheduleSync();
     return true;
   }
@@ -386,7 +404,7 @@
     nav.id='mobileAppNav';
     nav.setAttribute('aria-label','Plant Room mobile navigation');
     nav.innerHTML=`
-      <button type="button" class="mobile-nav-item" data-v47-nav="dashboard" aria-label="Home">${icons.home}<span>Home</span></button>
+      <button type="button" class="mobile-nav-item" data-v47-nav="dashboard" aria-label="Dashboard">${icons.home}<span>Dashboard</span></button>
       <button type="button" class="mobile-nav-item" data-v47-nav="plants" aria-label="Plants">${icons.plants}<span>Plants</span></button>
       <div class="mobile-nav-add-wrap"><button type="button" id="mobileNavAdd" aria-label="Quick add">＋</button></div>
       <button type="button" class="mobile-nav-item" data-v47-nav="locations" aria-label="Zones">${icons.zones}<span>Zones</span></button>
@@ -434,6 +452,7 @@
       return;
     }
     ensureNav();
+    applyMobileStartupDashboard();
     syncActiveState();
     syncOwnerVisibility();
   }
@@ -565,7 +584,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.38.3';
+  const VERSION='v4.38.4';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2107,6 +2126,7 @@ body{
   releases.unshift({"version":"4.38.1","date":"22 Aug 2026","title":"Add Plant growing-zone repair","changes":["Restored all saved growing zones in the Add New Plant selector on desktop and mobile.","Rebuilt the selector whenever the form opens while preserving the current choice.","Kept Create new growing zone available and focused its name field automatically."]});
   releases.unshift({"version":"4.38.2","date":"22 Aug 2026","title":"Desktop growing-zone repair","changes":["Fixed the desktop Add New Plant selector when the app’s private zone state was unavailable to the repair layer.","Recovered saved zones from the desktop location filter or rendered zone cards after cloud loading.","Kept Create new growing zone available even before saved zones finish loading."]});
   releases.unshift({"version":"4.38.3","date":"22 Aug 2026","title":"Desktop image viewer scaling repair","changes":["Stopped the mobile three-slide photo carousel from wrapping desktop Gallery and Growth images.","Restored contained desktop image scaling inside the available viewer stage.","Kept all mobile swipe, zoom, shadow and transition behaviour unchanged."]});
+  releases.unshift({"version":"4.38.4","date":"28 Aug 2026","title":"Mobile Dashboard startup","changes":["Changed the mobile app’s default landing position from the Home hero to the Dashboard content.","Made overdue plants, upcoming checks and care counters visible immediately after startup.","Renamed the mobile Home navigation item to Dashboard while leaving desktop navigation unchanged."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
