@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.38.5 — mobile owner Dashboard recovery */
+/* Jasper's Plant Room v4.39.0 — private purchase price */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -502,6 +502,160 @@
   else init();
 })();
 
+/* Jasper's Plant Room v4.39.0 — owner-only purchase price. */
+(function v439PurchasePrice(){
+  const TABLE='plant_private_details';
+  let syncQueued=false;
+
+  function ownerMode(){return document.body?.classList.contains('owner-mode');}
+  function plantById(id){
+    if(typeof db==='undefined')return null;
+    return (db.plants||[]).find(plant=>String(plant.cloudId)===String(id))||null;
+  }
+  function formatPrice(value){
+    if(value===null||value===undefined||value==='')return 'Not recorded';
+    const amount=Number(value);
+    if(!Number.isFinite(amount))return 'Not recorded';
+    return new Intl.NumberFormat('en-SG',{style:'currency',currency:'SGD',minimumFractionDigits:2}).format(amount);
+  }
+
+  async function loadPrivatePrices(){
+    if(!ownerMode()||typeof sb==='undefined'||typeof db==='undefined')return;
+    const result=await sb.from(TABLE).select('plant_id,purchase_price,currency');
+    if(result.error)throw result.error;
+    const prices=new Map((result.data||[]).map(row=>[String(row.plant_id),row.purchase_price]));
+    (db.plants||[]).forEach(plant=>{
+      const value=prices.get(String(plant.cloudId));
+      plant.purchasePrice=value===null||value===undefined?null:Number(value);
+    });
+  }
+
+  function wrapCloudLoad(){
+    if(typeof loadCloud!=='function'||loadCloud.v439PurchasePrice)return;
+    const previous=loadCloud;
+    const wrapped=async function(){
+      const result=await previous.apply(this,arguments);
+      try{await loadPrivatePrices();}
+      catch(error){console.error('Purchase price sync failed',error);}
+      return result;
+    };
+    wrapped.v439PurchasePrice=true;
+    loadCloud=wrapped;
+  }
+
+  function injectPriceDetail(plantId){
+    const existing=document.querySelector('#plantDialog .v439-purchase-price');
+    existing?.remove();
+    if(!ownerMode())return;
+    const plant=plantById(plantId);
+    const grid=document.querySelector('#plantDialog .detail-grid');
+    if(!plant||!grid)return;
+    const row=document.createElement('div');
+    row.className='detail v439-purchase-price';
+    const label=document.createElement('span');label.textContent='Purchase price';
+    const value=document.createElement('strong');value.textContent=formatPrice(plant.purchasePrice);
+    row.append(label,value);
+    const medium=[...grid.querySelectorAll('.detail')].find(item=>item.querySelector('span')?.textContent?.trim().toLowerCase()==='medium');
+    if(medium?.nextSibling)grid.insertBefore(row,medium.nextSibling);else grid.appendChild(row);
+  }
+
+  function wrapPlantOpen(){
+    if(typeof openPlant!=='function'||openPlant.v439PurchasePrice)return;
+    const previous=openPlant;
+    const wrapped=function(plantId){
+      const result=previous.apply(this,arguments);
+      requestAnimationFrame(()=>injectPriceDetail(plantId));
+      return result;
+    };
+    wrapped.v439PurchasePrice=true;
+    openPlant=wrapped;
+  }
+
+  function editorPlant(dlg){
+    const title=dlg.querySelector('#fullEditTitle')?.textContent?.trim();
+    if(title&&typeof db!=='undefined'){
+      const match=(db.plants||[]).find(plant=>plant.name===title);
+      if(match)return match;
+    }
+    const id=dlg.querySelector('#fullEditPurchasePrice')?.dataset.plantId;
+    return id?plantById(id):null;
+  }
+
+  function fillEditorPrice(dlg){
+    const input=dlg.querySelector('#fullEditPurchasePrice');
+    if(!input)return;
+    const plant=editorPlant(dlg);
+    if(!plant)return;
+    input.dataset.plantId=String(plant.cloudId);
+    input.value=plant.purchasePrice===null||plant.purchasePrice===undefined?'':String(plant.purchasePrice);
+  }
+
+  function enhanceEditor(){
+    const dlg=document.getElementById('fullPlantEditDialog');
+    if(!dlg)return;
+    if(!dlg.querySelector('#fullEditPurchaseSection')){
+      const identity=dlg.querySelector('.full-edit-body .full-edit-section');
+      const section=document.createElement('section');
+      section.id='fullEditPurchaseSection';section.className='full-edit-section';
+      section.innerHTML='<div class="full-edit-section-title">Purchase</div><div class="full-edit-grid"><label>Purchase price (S$)<input id="fullEditPurchasePrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 68.00"><span class="field-help">Optional · visible only in owner mode.</span></label></div>';
+      identity?.insertAdjacentElement('afterend',section);
+    }
+    const save=dlg.querySelector('#fullEditSave');
+    if(save&&save.dataset.v439PriceBound!=='1'){
+      save.dataset.v439PriceBound='1';
+      const previous=save.onclick;
+      save.onclick=async event=>{
+        const input=dlg.querySelector('#fullEditPurchasePrice');
+        const plant=editorPlant(dlg);
+        if(!input||!plant||typeof session==='undefined'||!session?.user?.id){
+          if(previous)return previous.call(save,event);
+          return;
+        }
+        const raw=input.value.trim();
+        const amount=raw===''?null:Number(raw);
+        if(amount!==null&&(!Number.isFinite(amount)||amount<0)){
+          alert('Enter a valid purchase price of 0 or more.');
+          input.focus();return;
+        }
+        save.disabled=true;
+        const status=dlg.querySelector('#fullEditStatus');
+        if(status)status.textContent='Saving purchase price…';
+        try{
+          const result=await sb.from(TABLE).upsert({
+            plant_id:plant.cloudId,
+            user_id:session.user.id,
+            purchase_price:amount,
+            currency:'SGD',
+            updated_at:new Date().toISOString()
+          },{onConflict:'plant_id'}).select('plant_id,purchase_price').single();
+          if(result.error)throw result.error;
+          plant.purchasePrice=result.data?.purchase_price===null?null:Number(result.data?.purchase_price);
+          if(previous)return await previous.call(save,event);
+        }catch(error){
+          console.error('Purchase price save failed',error);
+          if(status)status.textContent='Price save failed';
+          alert(error?.message||'Could not save the purchase price.');
+          save.disabled=false;
+        }
+      };
+    }
+    if(dlg.open)fillEditorPrice(dlg);
+  }
+
+  function sync(){
+    syncQueued=false;
+    wrapCloudLoad();wrapPlantOpen();enhanceEditor();
+  }
+  function schedule(){
+    if(syncQueued)return;
+    syncQueued=true;requestAnimationFrame(sync);
+  }
+
+  sync();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});
+  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','class']});
+})();
+
 /* Dashboard: compact counters for Jasper's main plant groups. */
 (function(){
   const css=`
@@ -606,7 +760,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.38.5';
+  const VERSION='v4.39.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2150,6 +2304,7 @@ body{
   releases.unshift({"version":"4.38.3","date":"22 Aug 2026","title":"Desktop image viewer scaling repair","changes":["Stopped the mobile three-slide photo carousel from wrapping desktop Gallery and Growth images.","Restored contained desktop image scaling inside the available viewer stage.","Kept all mobile swipe, zoom, shadow and transition behaviour unchanged."]});
   releases.unshift({"version":"4.38.4","date":"28 Aug 2026","title":"Mobile Dashboard startup","changes":["Changed the mobile app’s default landing position from the Home hero to the Dashboard content.","Made overdue plants, upcoming checks and care counters visible immediately after startup.","Renamed the mobile Home navigation item to Dashboard while leaving desktop navigation unchanged."]});
   releases.unshift({"version":"4.38.5","date":"28 Aug 2026","title":"Mobile owner Dashboard recovery","changes":["Stopped the installed mobile app from silently treating the public alphabetical collection as the owner Dashboard.","Waited for the saved owner session before settling the care queue after startup.","Opened owner sign-in when the installed app has no saved session, then returned to the real overdue and upcoming care Dashboard."]});
+  releases.unshift({"version":"4.39.0","date":"30 Aug 2026","title":"Private plant purchase prices","changes":["Added an optional Purchase price field to the full plant editor on desktop and mobile.","Displayed the saved Singapore-dollar price inside each plant’s Details section.","Stored purchase prices in a separate owner-only Supabase table so they are not exposed through the public collection."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
