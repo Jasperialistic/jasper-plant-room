@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.39.0 — private purchase price */
+/* Jasper's Plant Room v4.39.1 — purchase price typing repair */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -582,12 +582,20 @@
   }
 
   function fillEditorPrice(dlg){
+    if(dlg.dataset.v439PriceFilled==='1')return;
     const input=dlg.querySelector('#fullEditPurchasePrice');
     if(!input)return;
     const plant=editorPlant(dlg);
     if(!plant)return;
     input.dataset.plantId=String(plant.cloudId);
     input.value=plant.purchasePrice===null||plant.purchasePrice===undefined?'':String(plant.purchasePrice);
+    dlg.dataset.v439PriceFilled='1';
+  }
+
+  function resetEditorPrice(dlg){
+    delete dlg.dataset.v439PriceFilled;
+    const input=dlg.querySelector('#fullEditPurchasePrice');
+    if(input){input.value='';delete input.dataset.plantId;}
   }
 
   function enhanceEditor(){
@@ -639,6 +647,13 @@
         }
       };
     }
+    if(dlg.dataset.v439PriceLifecycleBound!=='1'){
+      dlg.dataset.v439PriceLifecycleBound='1';
+      new MutationObserver(()=>{
+        if(dlg.open)fillEditorPrice(dlg);else resetEditorPrice(dlg);
+      }).observe(dlg,{attributes:true,attributeFilter:['open']});
+      dlg.addEventListener('close',()=>resetEditorPrice(dlg));
+    }
     if(dlg.open)fillEditorPrice(dlg);
   }
 
@@ -653,7 +668,7 @@
 
   sync();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});
-  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','class']});
+  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
 })();
 
 /* Dashboard: compact counters for Jasper's main plant groups. */
@@ -760,7 +775,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.39.0';
+  const VERSION='v4.39.1';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2305,6 +2320,7 @@ body{
   releases.unshift({"version":"4.38.4","date":"28 Aug 2026","title":"Mobile Dashboard startup","changes":["Changed the mobile app’s default landing position from the Home hero to the Dashboard content.","Made overdue plants, upcoming checks and care counters visible immediately after startup.","Renamed the mobile Home navigation item to Dashboard while leaving desktop navigation unchanged."]});
   releases.unshift({"version":"4.38.5","date":"28 Aug 2026","title":"Mobile owner Dashboard recovery","changes":["Stopped the installed mobile app from silently treating the public alphabetical collection as the owner Dashboard.","Waited for the saved owner session before settling the care queue after startup.","Opened owner sign-in when the installed app has no saved session, then returned to the real overdue and upcoming care Dashboard."]});
   releases.unshift({"version":"4.39.0","date":"30 Aug 2026","title":"Private plant purchase prices","changes":["Added an optional Purchase price field to the full plant editor on desktop and mobile.","Displayed the saved Singapore-dollar price inside each plant’s Details section.","Stored purchase prices in a separate owner-only Supabase table so they are not exposed through the public collection."]});
+  releases.unshift({"version":"4.39.1","date":"30 Aug 2026","title":"Purchase price typing repair","changes":["Stopped the editor observer from repeatedly restoring the saved price while the field was being typed into.","Filled the purchase price only once per editor session so mobile and desktop input remains responsive.","Reduced the purchase-price observer to relevant dialog lifecycle changes."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
