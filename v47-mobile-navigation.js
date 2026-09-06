@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.41.0 — lightweight photo thumbnails */
+/* Jasper's Plant Room v4.41.1 — resilient thumbnail conversion */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -882,7 +882,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.41.0';
+  const VERSION='v4.41.1';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2430,6 +2430,7 @@ body{
   releases.unshift({"version":"4.39.1","date":"30 Aug 2026","title":"Purchase price typing repair","changes":["Stopped the editor observer from repeatedly restoring the saved price while the field was being typed into.","Filled the purchase price only once per editor session so mobile and desktop input remains responsive.","Reduced the purchase-price observer to relevant dialog lifecycle changes."]});
   releases.unshift({"version":"4.40.0","date":"6 Sep 2026","title":"Supabase bandwidth saver","changes":["Added a persistent app-side cache for Supabase plant photos so reopening the app no longer downloads the same files repeatedly.","Lazy-loaded off-screen collection photos and images inside hidden plant tabs.","Compressed future photo uploads to a high-quality web-sized copy and assigned immutable one-year browser caching."]});
   releases.unshift({"version":"4.41.0","date":"6 Sep 2026","title":"Lightweight photo library","changes":["Added dedicated 640px reference thumbnails for collection cards, Gallery grids and Growth Progress lists.","Kept full-resolution originals reserved for the enlarged Gallery and Growth photo viewers.","Added a one-time, low-impact desktop thumbnail preparation task with visible progress and immediate thumbnail creation for future uploads."]});
+  releases.unshift({"version":"4.41.1","date":"6 Sep 2026","title":"Thumbnail conversion recovery","changes":["Added a second browser image decoder for older JPEG encodings.","Retried transient download, conversion and upload failures up to three times with a short cooldown.","Added an authenticated Storage download fallback while preserving completed thumbnails and processing only the 22 remaining photos."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
@@ -3004,7 +3005,14 @@ body{
     });
   }
   async function makeThumbnail(blob){
-    const image=await decodeBlob(blob);
+    let image=null,bitmap=false;
+    if(typeof createImageBitmap==='function'){
+      try{
+        image=await createImageBitmap(blob,{imageOrientation:'from-image'});
+        bitmap=true;
+      }catch(error){console.debug('Bitmap decoder fallback',error);}
+    }
+    if(!image)image=await decodeBlob(blob);
     const sw=image.naturalWidth||image.width,sh=image.naturalHeight||image.height;
     if(!sw||!sh)throw new Error('The source photo has no dimensions.');
     const scale=Math.min(1,THUMB_EDGE/Math.max(sw,sh));
@@ -3015,15 +3023,24 @@ body{
     context.fillStyle='#08100d';context.fillRect(0,0,width,height);
     context.drawImage(image,0,0,width,height);
     const output=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',THUMB_QUALITY));
+    if(bitmap&&typeof image.close==='function')image.close();
     canvas.width=1;canvas.height=1;
     if(!output)throw new Error('The thumbnail could not be encoded.');
     return output;
   }
   async function fetchOriginal(row,base){
     const source=base?originalForBase(row):row.url;
-    const response=await fetch(source,{cache:'force-cache'});
-    if(!response.ok)throw new Error(`Source photo returned ${response.status}.`);
-    return response.blob();
+    try{
+      const response=await fetch(source,{cache:'force-cache'});
+      if(!response.ok)throw new Error(`Source photo returned ${response.status}.`);
+      return await response.blob();
+    }catch(error){
+      if(base||!row.storage_path)throw error;
+      const fallback=await sb.storage.from(BUCKET).download(row.storage_path);
+      if(fallback.error)throw fallback.error;
+      if(!fallback.data)throw error;
+      return fallback.data;
+    }
   }
   async function uploadThumbnail(path,blob){
     const result=await sb.storage.from(BUCKET).upload(path,blob,{
@@ -3038,12 +3055,22 @@ body{
     row.thumbnail_path=path;
   }
   async function prepareRow(row,base){
-    const path=thumbPath(row,base);
-    const source=await fetchOriginal(row,base);
-    const thumb=await makeThumbnail(source);
-    await uploadThumbnail(path,thumb);
-    await saveThumbnailPath(row,base,path);
-    rebuildMap();
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{
+        const path=thumbPath(row,base);
+        const source=await fetchOriginal(row,base);
+        const thumb=await makeThumbnail(source);
+        await uploadThumbnail(path,thumb);
+        await saveThumbnailPath(row,base,path);
+        rebuildMap();
+        return;
+      }catch(error){
+        lastError=error;
+        if(attempt<3)await pause(attempt*700);
+      }
+    }
+    throw lastError||new Error('Thumbnail preparation failed.');
   }
   function pendingRows(){
     if(typeof db==='undefined')return [];
