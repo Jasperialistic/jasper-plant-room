@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.40.0 — bandwidth saver */
-const CACHE_NAME='jasper-plant-room-shell-v4.40.0';
+/* Jasper's Plant Room v4.41.0 — lightweight photo thumbnails */
+const CACHE_NAME='jasper-plant-room-shell-v4.41.0';
 const PHOTO_CACHE_NAME='jasper-plant-room-photos-v1';
 const PLANT_MEDIA_ORIGIN='https://vslyrabiqgbgbcqgooxb.supabase.co';
 const SHELL=[
