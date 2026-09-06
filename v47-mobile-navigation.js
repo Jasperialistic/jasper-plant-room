@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.40.0 — bandwidth saver */
+/* Jasper's Plant Room v4.41.0 — lightweight photo thumbnails */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -882,7 +882,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.40.0';
+  const VERSION='v4.41.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2429,6 +2429,7 @@ body{
   releases.unshift({"version":"4.39.0","date":"30 Aug 2026","title":"Private plant purchase prices","changes":["Added an optional Purchase price field to the full plant editor on desktop and mobile.","Displayed the saved Singapore-dollar price inside each plant’s Details section.","Stored purchase prices in a separate owner-only Supabase table so they are not exposed through the public collection."]});
   releases.unshift({"version":"4.39.1","date":"30 Aug 2026","title":"Purchase price typing repair","changes":["Stopped the editor observer from repeatedly restoring the saved price while the field was being typed into.","Filled the purchase price only once per editor session so mobile and desktop input remains responsive.","Reduced the purchase-price observer to relevant dialog lifecycle changes."]});
   releases.unshift({"version":"4.40.0","date":"6 Sep 2026","title":"Supabase bandwidth saver","changes":["Added a persistent app-side cache for Supabase plant photos so reopening the app no longer downloads the same files repeatedly.","Lazy-loaded off-screen collection photos and images inside hidden plant tabs.","Compressed future photo uploads to a high-quality web-sized copy and assigned immutable one-year browser caching."]});
+  releases.unshift({"version":"4.41.0","date":"6 Sep 2026","title":"Lightweight photo library","changes":["Added dedicated 640px reference thumbnails for collection cards, Gallery grids and Growth Progress lists.","Kept full-resolution originals reserved for the enlarged Gallery and Growth photo viewers.","Added a one-time, low-impact desktop thumbnail preparation task with visible progress and immediate thumbnail creation for future uploads."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
@@ -2886,4 +2887,355 @@ body{
 }
 `;
   document.head.appendChild(style);
+})();
+
+// Jasper's Plant Room v4.41.0 — lightweight reference thumbnails.
+(function v441LightweightThumbnails(){
+  const BUCKET='plant-media';
+  const THUMB_EDGE=640;
+  const THUMB_QUALITY=.72;
+  const AUTO_KEY='jasper-v441-thumbnail-preparation';
+  const originalToThumb=new Map();
+  let running=false,cancelled=false,cloudWrapped=false;
+
+  const style=document.createElement('style');
+  style.id='v441ThumbnailStyles';
+  style.textContent=`
+#v416HeaderMenuPanel>#v441OptimizePhotos{
+  display:flex;width:100%;min-height:42px;align-items:center;gap:8px;box-sizing:border-box;margin:0;padding:0 10px;
+  border:0;border-radius:9px;background:transparent;color:#dce7e1;font-size:12px;text-align:left;cursor:pointer
+}
+#v416HeaderMenuPanel>#v441OptimizePhotos:hover{background:#1d322a}
+#v441ThumbDialog{
+  width:min(440px,calc(100vw - 28px));margin:auto;padding:0;border:1px solid rgba(129,166,148,.42);
+  border-radius:20px;background:#111f1a;color:#e9f1ed;box-shadow:0 28px 90px rgba(0,0,0,.68);overflow:hidden
+}
+#v441ThumbDialog::backdrop{background:rgba(2,6,5,.76);backdrop-filter:blur(5px)}
+#v441ThumbDialog .v441-thumb-body{padding:22px}
+#v441ThumbDialog h2{margin:0;font:600 23px/1.2 Georgia,serif}
+#v441ThumbDialog p{margin:9px 0 0;color:#93a79e;font-size:12px;line-height:1.55}
+#v441ThumbDialog progress{display:block;width:100%;height:8px;margin:20px 0 10px;accent-color:#d5be85}
+#v441ThumbDialog .v441-thumb-status{min-height:18px;color:#c6d4cd;font-size:11px}
+#v441ThumbDialog .v441-thumb-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+#v441ThumbDialog button{min-height:42px;padding:0 15px;border:1px solid #365247;border-radius:11px;background:#172b23;color:#eaf1ed;font:700 12px/1 system-ui;cursor:pointer}
+#v441ThumbDialog button[data-v441-primary]{border-color:#d5be85;background:#d5be85;color:#142018}
+.v441-thumb-note{display:block;margin-top:6px;color:#71877d;font-size:10px}
+`;
+  document.head.appendChild(style);
+
+  function ownerMode(){
+    return !!(document.body?.classList.contains('owner-mode')&&
+      typeof session!=='undefined'&&session?.user?.id&&typeof sb!=='undefined');
+  }
+  function thumbPath(row,base){
+    return `${session.user.id}/${row.plant_id}/thumbs/${base?'base':'photo'}-${row.id}.jpg`;
+  }
+  function publicThumb(path){
+    return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+  function originalForBase(row){
+    return typeof resolveAsset==='function'?resolveAsset(row.asset_path):row.asset_path;
+  }
+  function rebuildMap(){
+    originalToThumb.clear();
+    if(typeof db==='undefined'||typeof sb==='undefined')return;
+    (db.photos||[]).forEach(row=>{
+      if(row?.url&&row.thumbnail_path)originalToThumb.set(String(row.url),publicThumb(row.thumbnail_path));
+    });
+    (db.basePhotoMeta||[]).forEach(row=>{
+      if(row?.asset_path&&row.thumbnail_path)originalToThumb.set(String(originalForBase(row)),publicThumb(row.thumbnail_path));
+    });
+    applyThumbs(document);
+  }
+  function isFullViewerImage(img){
+    return !!img.closest('#photoLightbox,#growthPhotoViewer')||
+      img.matches('#photoLightboxImg,#growthViewImg,.v432-photo-clone');
+  }
+  function applyThumb(img){
+    if(!(img instanceof HTMLImageElement)||isFullViewerImage(img))return;
+    const source=String(img.getAttribute('src')||img.currentSrc||img.src||'');
+    const thumb=originalToThumb.get(source);
+    if(!thumb||source===thumb)return;
+    img.decoding='async';
+    if(!img.matches('#mainPhoto,.gallery-main')){img.loading='lazy';img.setAttribute('fetchpriority','low');}
+    img.src=thumb;
+  }
+  function applyThumbs(root){
+    if(root instanceof HTMLImageElement)applyThumb(root);
+    root?.querySelectorAll?.('img').forEach(applyThumb);
+  }
+  function withDisplayUrls(callback){
+    if(typeof db==='undefined'||typeof sb==='undefined')return callback();
+    const cloud=[],bundled=[];
+    (db.photos||[]).forEach(row=>{
+      if(!row?.thumbnail_path)return;
+      cloud.push([row,row.url]);row.url=publicThumb(row.thumbnail_path);
+    });
+    (db.basePhotoMeta||[]).forEach(row=>{
+      if(!row?.thumbnail_path||!window.PLANT_IMAGES||
+        !Object.prototype.hasOwnProperty.call(window.PLANT_IMAGES,row.asset_path))return;
+      bundled.push([row.asset_path,window.PLANT_IMAGES[row.asset_path]]);
+      window.PLANT_IMAGES[row.asset_path]=publicThumb(row.thumbnail_path);
+    });
+    try{return callback();}
+    finally{
+      cloud.forEach(([row,url])=>{row.url=url;});
+      bundled.forEach(([path,url])=>{window.PLANT_IMAGES[path]=url;});
+    }
+  }
+  function wrapRenderers(){
+    ['renderAll','renderQueue','renderPlants','renderLocations','openPlant'].forEach(name=>{
+      const current=window[name];
+      if(typeof current!=='function'||current.v441LightweightThumbnails)return;
+      const wrapped=function(){
+        const self=this,args=arguments;
+        return withDisplayUrls(()=>current.apply(self,args));
+      };
+      wrapped.v441LightweightThumbnails=true;window[name]=wrapped;
+    });
+  }
+
+  function decodeBlob(blob){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(blob),image=new Image();
+      image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};
+      image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('The source photo could not be decoded.'));};
+      image.src=url;
+    });
+  }
+  async function makeThumbnail(blob){
+    const image=await decodeBlob(blob);
+    const sw=image.naturalWidth||image.width,sh=image.naturalHeight||image.height;
+    if(!sw||!sh)throw new Error('The source photo has no dimensions.');
+    const scale=Math.min(1,THUMB_EDGE/Math.max(sw,sh));
+    const width=Math.max(1,Math.round(sw*scale)),height=Math.max(1,Math.round(sh*scale));
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const context=canvas.getContext('2d',{alpha:false});
+    if(!context)throw new Error('This browser cannot prepare thumbnails.');
+    context.fillStyle='#08100d';context.fillRect(0,0,width,height);
+    context.drawImage(image,0,0,width,height);
+    const output=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',THUMB_QUALITY));
+    canvas.width=1;canvas.height=1;
+    if(!output)throw new Error('The thumbnail could not be encoded.');
+    return output;
+  }
+  async function fetchOriginal(row,base){
+    const source=base?originalForBase(row):row.url;
+    const response=await fetch(source,{cache:'force-cache'});
+    if(!response.ok)throw new Error(`Source photo returned ${response.status}.`);
+    return response.blob();
+  }
+  async function uploadThumbnail(path,blob){
+    const result=await sb.storage.from(BUCKET).upload(path,blob,{
+      contentType:'image/jpeg',cacheControl:'31536000',upsert:false
+    });
+    if(result.error&&!/already exists|duplicate/i.test(result.error.message||''))throw result.error;
+  }
+  async function saveThumbnailPath(row,base,path){
+    const table=base?'plant_base_photos':'plant_photos';
+    const result=await sb.from(table).update({thumbnail_path:path}).eq('id',row.id);
+    if(result.error)throw result.error;
+    row.thumbnail_path=path;
+  }
+  async function prepareRow(row,base){
+    const path=thumbPath(row,base);
+    const source=await fetchOriginal(row,base);
+    const thumb=await makeThumbnail(source);
+    await uploadThumbnail(path,thumb);
+    await saveThumbnailPath(row,base,path);
+    rebuildMap();
+  }
+  function pendingRows(){
+    if(typeof db==='undefined')return [];
+    const cloud=(db.photos||[]).filter(row=>row?.id&&row.plant_id&&!row.thumbnail_path)
+      .map(row=>({row,base:false}));
+    const bundled=(db.basePhotoMeta||[])
+      .filter(row=>row?.id&&row.plant_id&&row.asset_path&&!row.thumbnail_path&&!row.hidden&&!row.purged)
+      .map(row=>({row,base:true}));
+    return [...cloud,...bundled];
+  }
+  function waitForVisible(){
+    if(!document.hidden)return Promise.resolve();
+    return new Promise(resolve=>document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden)resolve();
+    },{once:true}));
+  }
+  function pause(ms=120){return new Promise(resolve=>setTimeout(resolve,ms));}
+  function ensureDialog(){
+    let dlg=document.getElementById('v441ThumbDialog');
+    if(dlg)return dlg;
+    dlg=document.createElement('dialog');dlg.id='v441ThumbDialog';
+    dlg.innerHTML=`<div class="v441-thumb-body">
+      <h2>Lightweight photo library</h2>
+      <p>This one-time task creates small reference copies. Your originals remain untouched and are used when you enlarge a photo.</p>
+      <progress value="0" max="1"></progress>
+      <div class="v441-thumb-status">Checking the photo library…</div>
+      <span class="v441-thumb-note">Best run on desktop. You can stop safely and resume later.</span>
+      <div class="v441-thumb-actions">
+        <button type="button" data-v441-cancel>Stop</button>
+        <button type="button" data-v441-primary hidden>Close</button>
+      </div>
+    </div>`;
+    document.body.appendChild(dlg);
+    dlg.querySelector('[data-v441-cancel]').onclick=()=>{
+      if(running){cancelled=true;dlg.querySelector('.v441-thumb-status').textContent='Stopping after the current photo…';}
+      else dlg.close();
+    };
+    dlg.querySelector('[data-v441-primary]').onclick=()=>dlg.close();
+    return dlg;
+  }
+  function finishDialog(dlg,message){
+    const cancel=dlg.querySelector('[data-v441-cancel]'),close=dlg.querySelector('[data-v441-primary]');
+    dlg.querySelector('.v441-thumb-status').textContent=message;
+    cancel.hidden=true;close.hidden=false;
+  }
+  async function runPreparation({automatic=false}={}){
+    if(running||!ownerMode())return;
+    if(automatic&&(matchMedia('(max-width:700px)').matches||navigator.connection?.saveData))return;
+    const work=pendingRows(),dlg=ensureDialog(),progress=dlg.querySelector('progress');
+    if(!dlg.open)dlg.showModal();
+    cancelled=false;running=true;progress.max=Math.max(1,work.length);progress.value=0;
+    dlg.querySelector('[data-v441-cancel]').hidden=false;
+    dlg.querySelector('[data-v441-primary]').hidden=true;
+    if(!work.length){running=false;finishDialog(dlg,'Everything is already lightweight and ready.');return;}
+    let completed=0,failed=0;
+    for(const item of work){
+      if(cancelled)break;
+      await waitForVisible();
+      dlg.querySelector('.v441-thumb-status').textContent=
+        `Preparing ${completed+1} of ${work.length} · ${item.base?'bundled':'cloud'} photo`;
+      try{await prepareRow(item.row,item.base);completed++;}
+      catch(error){failed++;console.warn('Thumbnail preparation skipped one photo',error);}
+      progress.value=completed+failed;
+      await pause();
+    }
+    running=false;
+    const left=pendingRows().length;
+    if(cancelled)finishDialog(dlg,`Stopped safely · ${left} photo${left===1?'':'s'} remaining.`);
+    else if(failed)finishDialog(dlg,`Prepared ${completed}. ${failed} could not be processed and can be retried.`);
+    else finishDialog(dlg,`Done · ${completed} lightweight photo${completed===1?'':'s'} prepared.`);
+  }
+
+  async function uploadPair(path,file){
+    const thumb=await makeThumbnail(file);
+    const tPath=path.replace(/\/(?:gallery|growth)\//i,'/thumbs/').replace(/\.[^/.]+$/,'')+'.thumb.jpg';
+    const original=await sb.storage.from(BUCKET).upload(path,file,{
+      contentType:file.type,cacheControl:'31536000',upsert:false
+    });
+    if(original.error)throw original.error;
+    try{await uploadThumbnail(tPath,thumb);}
+    catch(error){await sb.storage.from(BUCKET).remove([path]);throw error;}
+    return tPath;
+  }
+  async function uploadNewPlantPhotosV441(plantId,files,photoDate){
+    let uploaded=0;
+    for(let i=0;i<files.length;i++){
+      const file=files[i],path=`${session.user.id}/${plantId}/gallery/${crypto.randomUUID()}-${safeName(file.name)}`;
+      let tPath;
+      try{tPath=await uploadPair(path,file);}
+      catch(error){throw new Error(`Plant saved, but photo ${i+1} failed: ${error.message}`);}
+      const meta=await sb.from('plant_photos').insert({
+        user_id:session.user.id,plant_id:plantId,kind:'gallery',storage_path:path,thumbnail_path:tPath,
+        photo_date:photoDate||isoToday(),note:'',sort_order:(i+1)*10,is_thumbnail:i===0
+      });
+      if(meta.error){
+        await sb.storage.from(BUCKET).remove([path,tPath]);
+        throw new Error(`Plant saved, but photo ${i+1} metadata failed: ${meta.error.message}`);
+      }
+      uploaded++;
+    }
+    return uploaded;
+  }
+  async function uploadPhotoV441(){
+    if(!requireOwner())return;
+    const file=document.getElementById('photoFile')?.files?.[0],
+      plantId=document.getElementById('photoPlantId')?.value,
+      kind=document.getElementById('photoKind')?.value,
+      date=document.getElementById('photoDate')?.value||isoToday(),
+      note=document.getElementById('photoNote')?.value.trim()||'';
+    const message=document.getElementById('uploadMessage'),btn=document.getElementById('uploadPhotoBtn');
+    if(!file){if(message)message.textContent='Choose a photo first.';return;}
+    btn.disabled=true;if(message)message.textContent='Preparing lightweight photo…';
+    let path='',tPath='',metadataSaved=false;
+    try{
+      const plant=db.plants.find(item=>String(item.cloudId)===String(plantId));
+      const sortOrder=kind==='gallery'&&plant?nextGalleryOrder(plant):0;
+      path=`${session.user.id}/${plantId}/${kind}/${crypto.randomUUID()}-${safeName(file.name)}`;
+      tPath=await uploadPair(path,file);
+      const meta=await sb.from('plant_photos').insert({
+        user_id:session.user.id,plant_id:plantId,kind,storage_path:path,thumbnail_path:tPath,
+        photo_date:date,note,sort_order:sortOrder
+      });
+      if(meta.error)throw meta.error;
+      metadataSaved=true;
+      document.getElementById('photoDialog')?.close();
+      await loadCloud();openPlant(plantId,kind);
+    }catch(error){
+      console.error(error);
+      if(!metadataSaved&&path&&tPath)await sb.storage.from(BUCKET).remove([path,tPath]).catch(()=>{});
+      if(message)message.textContent=error.message;
+    }finally{btn.disabled=false;}
+  }
+
+  function installActions(){
+    const header=document.getElementById('v416HeaderMenuPanel');
+    if(header&&!document.getElementById('v441OptimizePhotos')){
+      const button=document.createElement('button');button.type='button';button.id='v441OptimizePhotos';
+      button.className='admin-only';button.innerHTML='▧ <span>Optimize photo library</span>';
+      button.onclick=()=>runPreparation();
+      const patch=document.getElementById('v429PatchNotesBtn');
+      if(patch?.nextSibling)header.insertBefore(button,patch.nextSibling);else header.appendChild(button);
+    }
+    const sheet=document.querySelector('#mobileMoreSheet .v47-sheet');
+    if(sheet&&!sheet.querySelector('[data-v441-optimize]')){
+      const button=document.createElement('button');button.type='button';
+      button.className='v47-sheet-action admin-only';button.dataset.v441Optimize='1';
+      button.innerHTML='Optimize photo library<small>Prepare small cached reference photos</small>';
+      button.onclick=()=>{document.getElementById('mobileMoreSheet')?.close();setTimeout(()=>runPreparation(),0);};
+      const cancel=sheet.querySelector('[data-v47-close]');
+      sheet.insertBefore(button,cancel);
+    }
+  }
+  function wrapCloud(){
+    if(cloudWrapped||typeof loadCloud!=='function')return;
+    const previous=loadCloud;
+    loadCloud=async function(){
+      const result=await previous.apply(this,arguments);
+      rebuildMap();installActions();
+      if(ownerMode()&&!localStorage.getItem(AUTO_KEY)){
+        localStorage.setItem(AUTO_KEY,'started');
+        setTimeout(()=>runPreparation({automatic:true}),2200);
+      }
+      return result;
+    };
+    loadCloud.v441LightweightThumbnails=true;cloudWrapped=true;
+  }
+  function installUploads(){
+    if(typeof uploadNewPlantPhotos==='function'&&!uploadNewPlantPhotos.v441LightweightThumbnails){
+      uploadNewPlantPhotos=uploadNewPlantPhotosV441;
+      uploadNewPlantPhotos.v441LightweightThumbnails=true;
+    }
+    if(typeof uploadPhoto==='function'&&!uploadPhoto.v441LightweightThumbnails){
+      uploadPhoto=uploadPhotoV441;uploadPhoto.v441LightweightThumbnails=true;
+    }
+    const button=document.getElementById('uploadPhotoBtn');
+    if(button&&button.dataset.v441Upload!=='1'){
+      button.dataset.v441Upload='1';button.onclick=uploadPhotoV441;
+    }
+  }
+  let queued=false;
+  function sync(){queued=false;wrapRenderers();wrapCloud();installUploads();installActions();}
+  function schedule(){if(queued)return;queued=true;requestAnimationFrame(sync);}
+  sync();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});
+  new MutationObserver(records=>{
+    let needsSync=false;
+    records.forEach(record=>{
+      if(record.type==='attributes')applyThumb(record.target);
+      else record.addedNodes.forEach(node=>{
+        if(node.nodeType===1){applyThumbs(node);needsSync=true;}
+      });
+    });
+    if(needsSync)schedule();
+  }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src']});
 })();
