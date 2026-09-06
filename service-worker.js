@@ -1,5 +1,7 @@
-/* Jasper's Plant Room v4.39.1 — purchase price typing repair */
-const CACHE_NAME='jasper-plant-room-shell-v4.39.1';
+/* Jasper's Plant Room v4.40.0 — bandwidth saver */
+const CACHE_NAME='jasper-plant-room-shell-v4.40.0';
+const PHOTO_CACHE_NAME='jasper-plant-room-photos-v1';
+const PLANT_MEDIA_ORIGIN='https://vslyrabiqgbgbcqgooxb.supabase.co';
 const SHELL=[
   './',
   './manifest.webmanifest',
@@ -33,6 +35,21 @@ self.addEventListener('fetch',event=>{
   if(req.method!=='GET')return;
 
   const url=new URL(req.url);
+
+  if(url.origin===PLANT_MEDIA_ORIGIN&&url.pathname.startsWith('/storage/v1/object/public/plant-media/')){
+    event.respondWith((async()=>{
+      const cache=await caches.open(PHOTO_CACHE_NAME);
+      const cached=await cache.match(req);
+      if(cached)return cached;
+      const response=await fetch(req);
+      if(response&&(response.ok||response.type==='opaque')){
+        cache.put(req,response.clone()).catch(()=>{});
+      }
+      return response;
+    })());
+    return;
+  }
+
   if(url.origin!==self.location.origin)return; // Never cache Supabase/auth/photo API traffic.
 
   if(req.mode==='navigate'){
