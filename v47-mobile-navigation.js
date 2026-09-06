@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.39.1 — purchase price typing repair */
+/* Jasper's Plant Room v4.40.0 — bandwidth saver */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -671,6 +671,113 @@
   new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
 })();
 
+/* Jasper's Plant Room v4.40.0 — lower Supabase photo egress. */
+(function v440BandwidthSaver(){
+  const MEDIA_PREFIX='https://vslyrabiqgbgbcqgooxb.supabase.co/storage/v1/object/public/plant-media/';
+  const MAX_EDGE=2200;
+  const JPEG_QUALITY=.84;
+
+  function isPlantMediaImage(img){
+    return String(img?.currentSrc||img?.src||'').startsWith(MEDIA_PREFIX);
+  }
+  function isPriorityImage(img){
+    return img.matches('#mainPhoto,#photoLightboxImg,#growthViewImg,.gallery-main,.photo-lightbox-img,.growth-view-img');
+  }
+  function tuneImage(img){
+    if(!(img instanceof HTMLImageElement)||!isPlantMediaImage(img))return;
+    img.decoding='async';
+    if(isPriorityImage(img)){
+      img.loading='eager';img.setAttribute('fetchpriority','high');
+    }else{
+      img.loading='lazy';img.setAttribute('fetchpriority','low');
+    }
+  }
+  function tuneImages(root=document){
+    if(root instanceof HTMLImageElement)tuneImage(root);
+    root.querySelectorAll?.('img').forEach(tuneImage);
+  }
+
+  function tunedRenderer(current){
+    const wrapped=function(){
+      const result=current.apply(this,arguments);
+      tuneImages();
+      return result;
+    };
+    wrapped.v440BandwidthSaver=true;
+    return wrapped;
+  }
+  function wrapRenderers(){
+    if(typeof renderAll==='function'&&!renderAll.v440BandwidthSaver)renderAll=tunedRenderer(renderAll);
+    if(typeof renderQueue==='function'&&!renderQueue.v440BandwidthSaver)renderQueue=tunedRenderer(renderQueue);
+    if(typeof renderPlants==='function'&&!renderPlants.v440BandwidthSaver)renderPlants=tunedRenderer(renderPlants);
+    if(typeof renderLocations==='function'&&!renderLocations.v440BandwidthSaver)renderLocations=tunedRenderer(renderLocations);
+    if(typeof openPlant==='function'&&!openPlant.v440BandwidthSaver)openPlant=tunedRenderer(openPlant);
+  }
+
+  function decodeImage(file){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file),img=new Image();
+      img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};
+      img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Image could not be decoded.'));};
+      img.src=url;
+    });
+  }
+  async function optimizeUpload(file){
+    if(!(file instanceof Blob)||!String(file.type||'').startsWith('image/')||file.size<=500000)return file;
+    try{
+      const image=await decodeImage(file);
+      const sourceWidth=image.naturalWidth||image.width,sourceHeight=image.naturalHeight||image.height;
+      if(!sourceWidth||!sourceHeight)return file;
+      const scale=Math.min(1,MAX_EDGE/Math.max(sourceWidth,sourceHeight));
+      const width=Math.max(1,Math.round(sourceWidth*scale)),height=Math.max(1,Math.round(sourceHeight*scale));
+      const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+      const context=canvas.getContext('2d',{alpha:false});
+      if(!context)return file;
+      context.fillStyle='#08100d';context.fillRect(0,0,width,height);
+      context.drawImage(image,0,0,width,height);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',JPEG_QUALITY));
+      canvas.width=1;canvas.height=1;
+      if(!blob||blob.size>=file.size)return file;
+      const originalName=String(file.name||'plant-photo').replace(/\.[^.]+$/,'');
+      return new File([blob],`${originalName}.jpg`,{type:'image/jpeg',lastModified:Date.now()});
+    }catch(error){
+      console.warn('Photo optimization skipped',error);
+      return file;
+    }
+  }
+
+  function wrapStorageUploads(){
+    if(typeof sb==='undefined'||!sb?.storage||sb.storage.v440BandwidthSaver)return;
+    const originalFrom=sb.storage.from.bind(sb.storage);
+    sb.storage.from=function(bucket){
+      const api=originalFrom(bucket);
+      if(bucket!=='plant-media'||typeof api?.upload!=='function')return api;
+      const originalUpload=api.upload.bind(api);
+      api.upload=async function(path,file,options={}){
+        const mediaPath=String(path||'');
+        const shouldOptimize=/(?:^|\/)(?:gallery|growth|zones?)(?:\/|$)/i.test(mediaPath);
+        const prepared=shouldOptimize?await optimizeUpload(file):file;
+        return originalUpload(path,prepared,{
+          ...options,
+          contentType:prepared?.type||options.contentType,
+          cacheControl:'31536000'
+        });
+      };
+      return api;
+    };
+    sb.storage.v440BandwidthSaver=true;
+  }
+
+  function init(){
+    wrapRenderers();wrapStorageUploads();tuneImages();
+    new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
+      if(node.nodeType===1)tuneImages(node);
+    }))).observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+})();
+
 /* Dashboard: compact counters for Jasper's main plant groups. */
 (function(){
   const css=`
@@ -775,7 +882,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.39.1';
+  const VERSION='v4.40.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2321,6 +2428,7 @@ body{
   releases.unshift({"version":"4.38.5","date":"28 Aug 2026","title":"Mobile owner Dashboard recovery","changes":["Stopped the installed mobile app from silently treating the public alphabetical collection as the owner Dashboard.","Waited for the saved owner session before settling the care queue after startup.","Opened owner sign-in when the installed app has no saved session, then returned to the real overdue and upcoming care Dashboard."]});
   releases.unshift({"version":"4.39.0","date":"30 Aug 2026","title":"Private plant purchase prices","changes":["Added an optional Purchase price field to the full plant editor on desktop and mobile.","Displayed the saved Singapore-dollar price inside each plant’s Details section.","Stored purchase prices in a separate owner-only Supabase table so they are not exposed through the public collection."]});
   releases.unshift({"version":"4.39.1","date":"30 Aug 2026","title":"Purchase price typing repair","changes":["Stopped the editor observer from repeatedly restoring the saved price while the field was being typed into.","Filled the purchase price only once per editor session so mobile and desktop input remains responsive.","Reduced the purchase-price observer to relevant dialog lifecycle changes."]});
+  releases.unshift({"version":"4.40.0","date":"6 Sep 2026","title":"Supabase bandwidth saver","changes":["Added a persistent app-side cache for Supabase plant photos so reopening the app no longer downloads the same files repeatedly.","Lazy-loaded off-screen collection photos and images inside hidden plant tabs.","Compressed future photo uploads to a high-quality web-sized copy and assigned immutable one-year browser caching."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
