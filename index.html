@@ -1752,7 +1752,7 @@ function timelineHTML(list){return list.map(x=>`<div class="timeline-item"><div 
 function renderRecent(){if(!isOwner)return;const list=[...db.careLog].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);$('#recentLog').innerHTML=timelineHTML(list);$('#fullLog').innerHTML=timelineHTML([...db.careLog].sort((a,b)=>b.date.localeCompare(a.date)));}
 function renderPlants(){const q=$('#search').value.toLowerCase(),g=$('#groupFilter').value,l=$('#locationFilter').value,s=isOwner?$('#statusFilter').value:'';const list=db.plants.filter(p=>{const hay=[p.name,p.group,p.location,p.medium,p.pot,p.potType,p.outer].join(' ').toLowerCase();if(q&&!hay.includes(q))return false;if(g&&p.group!==g)return false;if(l&&p.location!==l)return false;const st=statusOf(p);if(s==='due'&&!['today','overdue'].includes(st))return false;if(s==='upcoming'&&st!=='upcoming')return false;if(s==='reservoir'&&st!=='reservoir')return false;return true;});$('#plantGrid').innerHTML=list.length?list.map(p=>`<article class="plant-card" data-id="${p.cloudId}"><img class="plant-photo" src="${photo(p)}" alt="${esc(p.name)}"><div class="plant-body"><div class="plant-top"><div><h3>${esc(p.name)}</h3><div class="plant-sub">${esc(p.location||'')}</div></div>${isOwner?`<span class="status ${statusOf(p)}">${statusLabel(p)}</span>`:''}</div><div class="chips"><span class="chip">${esc(p.group||'Plant')}</span>${p.pot?`<span class="chip">${esc(p.pot)}</span>`:''}${p.mode?`<span class="chip">${esc(p.mode)}</span>`:''}</div>${isOwner?`<div class="care-line"><div>Last care<strong>${fmt(p.lastCare)}</strong></div><div>Next check<strong>${p.nextCheck?fmt(p.nextCheck):'Reservoir-based'}</strong></div></div>`:''}</div></article>`).join(''):'<div class="empty">No plants match these filters.</div>';$$('#plantGrid .plant-card').forEach(el=>el.onclick=()=>openPlant(el.dataset.id));}
 function renderFilters(reset=false){const g=$('#groupFilter'),l=$('#locationFilter'),gv=g.value,lv=l.value;if(reset){g.innerHTML='<option value="">All groups</option>';l.innerHTML='<option value="">All locations</option>';}[...new Set(db.plants.map(p=>p.group))].filter(Boolean).sort().forEach(x=>{if(![...g.options].some(o=>o.value===x))g.insertAdjacentHTML('beforeend',`<option>${esc(x)}</option>`)});[...new Set(db.plants.map(p=>p.location))].filter(Boolean).sort().forEach(x=>{if(![...l.options].some(o=>o.value===x))l.insertAdjacentHTML('beforeend',`<option>${esc(x)}</option>`)});if([...g.options].some(o=>o.value===gv))g.value=gv;if([...l.options].some(o=>o.value===lv))l.value=lv;}
-function renderLocations(){$('#locationCards').innerHTML=db.locations.map(x=>{const count=db.plants.filter(p=>p.location===x.name).length,pic=x.photo?`<img class="location-photo" src="${resolveAsset(x.photo)}" alt="${esc(x.name)}">`:'';const metrics=[x.humidity?`<span class="chip">Humidity ${esc(x.humidity)}</span>`:'',x.par?`<span class="chip">PAR ${esc(x.par)}</span>`:''].filter(Boolean).join('');return`<div class="location-card ${x.photo?'has-photo':''}" data-zone-name="${esc(x.name)}" data-zone-id="${x.id||''}">${pic}<div class="location-card-content"><div class="location-icon">${esc(x.icon||'◇')}</div><h3>${esc(x.name)}</h3><p>${esc(x.details||'')}</p>${metrics?`<div class="zone-metrics">${metrics}</div>`:''}${x.growLights?`<div class="zone-note"><strong>Grow lights:</strong> ${esc(x.growLights)}</div>`:''}${x.notes?`<div class="zone-note">${esc(x.notes)}</div>`:''}<small>${count} profiled plant${count===1?'':'s'} · click to view</small>${isOwner&&x.id?`<button class="ghost small zone-edit" data-edit-zone="${x.id}">Edit zone</button>`:''}</div></div>`}).join('');$$('#locationCards .location-card').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-zone]'))return;openZonePlants(card.dataset.zoneName);});$$('[data-edit-zone]').forEach(b=>b.onclick=e=>{e.stopPropagation();openZoneEdit(b.dataset.editZone);});}
+function renderLocations(){$('#locationCards').innerHTML=db.locations.map(x=>{const count=db.plants.filter(p=>p.location===x.name).length,original=x.photo?resolveAsset(x.photo):'',display=original&&typeof window.plantThumbnailUrl==='function'?window.plantThumbnailUrl(original):original,pic=display?`<img class="location-photo" src="${display}" data-full-src="${original}" alt="${esc(x.name)}" loading="lazy" decoding="async" fetchpriority="low">`:'';const metrics=[x.humidity?`<span class="chip">Humidity ${esc(x.humidity)}</span>`:'',x.par?`<span class="chip">PAR ${esc(x.par)}</span>`:''].filter(Boolean).join('');return`<div class="location-card ${x.photo?'has-photo':''}" data-zone-name="${esc(x.name)}" data-zone-id="${x.id||''}">${pic}<div class="location-card-content"><div class="location-icon">${esc(x.icon||'◇')}</div><h3>${esc(x.name)}</h3><p>${esc(x.details||'')}</p>${metrics?`<div class="zone-metrics">${metrics}</div>`:''}${x.growLights?`<div class="zone-note"><strong>Grow lights:</strong> ${esc(x.growLights)}</div>`:''}${x.notes?`<div class="zone-note">${esc(x.notes)}</div>`:''}<small>${count} profiled plant${count===1?'':'s'} · click to view</small>${isOwner&&x.id?`<button class="ghost small zone-edit" data-edit-zone="${x.id}">Edit zone</button>`:''}</div></div>`}).join('');$$('#locationCards .location-card').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-zone]'))return;openZonePlants(card.dataset.zoneName);});$$('[data-edit-zone]').forEach(b=>b.onclick=e=>{e.stopPropagation();openZoneEdit(b.dataset.editZone);});}
 function openZonePlants(name){const tab=$('[data-view="plants"]');if(tab)tab.click();const filter=$('#locationFilter');if(filter){filter.value=name;renderPlants();}setTimeout(()=>$('#plantsView')?.scrollIntoView({behavior:'smooth',block:'start'}),20);}
 let zonePhotoPreviewUrl='';
 function setZonePhotoPreview(src='',isObjectUrl=false){const img=$('#zoneEditPhotoPreview');if(!img)return;if(zonePhotoPreviewUrl){URL.revokeObjectURL(zonePhotoPreviewUrl);zonePhotoPreviewUrl='';}if(isObjectUrl&&src)zonePhotoPreviewUrl=src;img.src=src||'';img.classList.toggle('has-photo',!!src);}
@@ -1760,13 +1760,13 @@ function openZoneEdit(id){if(!requireOwner())return;const z=db.locations.find(x=
 async function saveZoneEdit(){
  if(!requireOwner())return;
  const id=$('#zoneEditId').value,file=$('#zoneEditPhoto').files[0],payload={details:$('#zoneEditDetails').value.trim(),humidity:$('#zoneEditHumidity').value.trim()||null,par:$('#zoneEditPar').value.trim()||null,grow_lights:$('#zoneEditLights').value.trim()||null,notes:$('#zoneEditNotes').value.trim()||null},btn=$('#saveZoneEditBtn');
- let uploadedPath='',saved=false;
+ let uploadedPath='',uploadedThumbnailPath='',saved=false;
  btn.disabled=true;btn.textContent=file?'Uploading photo…':'Saving…';
  try{
-  if(file){uploadedPath=`${session.user.id}/locations/${id}/${crypto.randomUUID()}-${safeName(file.name)}`;const up=await sb.storage.from('plant-media').upload(uploadedPath,file,{contentType:file.type||'application/octet-stream',upsert:false});if(up.error)throw up.error;payload.photo_asset_path=publicUrl(uploadedPath);btn.textContent='Saving…';}
+  if(file){uploadedPath=`${session.user.id}/locations/${id}/${crypto.randomUUID()}-${safeName(file.name)}`;uploadedThumbnailPath=window.plantLocationThumbPath?.(uploadedPath)||'';if(!uploadedThumbnailPath||typeof window.plantMakeThumbnail!=='function')throw new Error('Location thumbnail support is unavailable. Reload and try again.');const thumb=await window.plantMakeThumbnail(file);const up=await sb.storage.from('plant-media').upload(uploadedPath,file,{contentType:file.type||'application/octet-stream',cacheControl:'31536000',upsert:false});if(up.error)throw up.error;const thumbUp=await sb.storage.from('plant-media').upload(uploadedThumbnailPath,thumb,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});if(thumbUp.error)throw thumbUp.error;payload.photo_asset_path=publicUrl(uploadedPath);btn.textContent='Saving…';}
   const r=await sb.from('grow_zones').update(payload).eq('id',id);if(r.error)throw r.error;saved=true;
   $('#zoneEditDialog').close();await loadCloud();$('[data-view="locations"]')?.click();
- }catch(e){if(uploadedPath&&!saved)await sb.storage.from('plant-media').remove([uploadedPath]);console.error(e);alert(`Could not save location: ${e.message||e}`);}
+ }catch(e){if(uploadedPath&&!saved)await sb.storage.from('plant-media').remove([uploadedPath,uploadedThumbnailPath].filter(Boolean));console.error(e);alert(`Could not save location: ${e.message||e}`);}
  finally{btn.disabled=false;btn.textContent='Save zone';}
 }
 function renderBacklog(){$('#backlog').innerHTML=db.backlog.length?db.backlog.map(x=>`<div class="backlog-card"><div class="eyebrow">${esc(x.status)}</div><h3>${esc(x.name)}</h3><p>${esc(x.note)}</p></div>`).join(''):'<div class="empty">All plants currently profiled in the room are in the dashboard.</div>';}
@@ -1827,8 +1827,6 @@ $('#todayText').textContent=new Date().toLocaleDateString(undefined,{weekday:'lo
 $('#newPlantLastCare').value=isoToday();$('#newPlantPhotoDate').value=isoToday();
 sb.auth.onAuthStateChange((event,s)=>{session=s;if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED')boot();if(event==='SIGNED_OUT'){session=null;isOwner=false;setOwnerUI();loadCloud().catch(()=>{});}});
 window.addEventListener('focus',()=>loadCloud().catch(()=>{}));
-boot();
-
 </script>
   <script src="v25-photo-viewer.js?v=3.8.0"></script>
 <script src="v36-mobile-gallery.js?v=3.9.0"></script>
@@ -1842,7 +1840,7 @@ boot();
   <script src="v44-add-plant-presets-light.js?v=4.4.1"></script>
   <script src="v45-location-light-link.js?v=4.5.2"></script>
   <script src="v46-pwa-shell.js?v=4.6.0"></script>
-  <script src="v47-mobile-navigation.js?v=4.8.0"></script>
+  <script src="v47-mobile-navigation.js?v=4.41.2"></script>
   <script src="v26-photo-fit.js?v=2.6.0"></script>
   <script src="v27-permanent-delete.js?v=2.7.0"></script>
   <script src="v28-chatgpt-share.js?v=2.9.0"></script>
@@ -1853,5 +1851,6 @@ boot();
   <script src="v34-plant-aliases.js?v=3.4.0"></script>
   <script src="v35-telegram-reference-packet.js?v=3.5.0"></script>
   <script src="v36-ai-review.js?v=3.7.0"></script>
+  <script>boot();</script>
 </body>
 </html>

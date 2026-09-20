@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.41.1 — resilient thumbnail conversion */
+/* Jasper's Plant Room v4.41.2 — thumbnail delivery enforcement */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -882,7 +882,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.41.1';
+  const VERSION='v4.41.2';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2431,6 +2431,7 @@ body{
   releases.unshift({"version":"4.40.0","date":"6 Sep 2026","title":"Supabase bandwidth saver","changes":["Added a persistent app-side cache for Supabase plant photos so reopening the app no longer downloads the same files repeatedly.","Lazy-loaded off-screen collection photos and images inside hidden plant tabs.","Compressed future photo uploads to a high-quality web-sized copy and assigned immutable one-year browser caching."]});
   releases.unshift({"version":"4.41.0","date":"6 Sep 2026","title":"Lightweight photo library","changes":["Added dedicated 640px reference thumbnails for collection cards, Gallery grids and Growth Progress lists.","Kept full-resolution originals reserved for the enlarged Gallery and Growth photo viewers.","Added a one-time, low-impact desktop thumbnail preparation task with visible progress and immediate thumbnail creation for future uploads."]});
   releases.unshift({"version":"4.41.1","date":"6 Sep 2026","title":"Thumbnail conversion recovery","changes":["Added a second browser image decoder for older JPEG encodings.","Retried transient download, conversion and upload failures up to three times with a short cooldown.","Added an authenticated Storage download fallback while preserving completed thumbnails and processing only the 22 remaining photos."]});
+  releases.unshift({"version":"4.41.2","date":"20 Sep 2026","title":"Thumbnail delivery enforcement","changes":["Installed the media-delivery patches before the first cloud render so Dashboard, Plants, Gallery and Growth lists use existing lightweight derivatives on initial load.","Kept Gallery preview changes on thumbnails instead of briefly requesting originals.","Limited the mobile full-screen carousel to the deliberately opened original while adjacent swipe previews use thumbnails."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
@@ -2738,8 +2739,9 @@ body{
       count=data?.urls?.length||0;rail.dataset.count=String(count);
       if(!data||!count){prevImg.removeAttribute('src');nextImg.removeAttribute('src');return;}
       const index=Math.max(0,Math.min(count-1,data.index||0));
-      prevImg.src=data.urls[(index-1+count)%count]||'';
-      nextImg.src=data.urls[(index+1)%count]||'';
+      const displayUrl=typeof window.plantThumbnailUrl==='function'?window.plantThumbnailUrl:url=>url;
+      prevImg.src=displayUrl(data.urls[(index-1+count)%count]||'');
+      nextImg.src=displayUrl(data.urls[(index+1)%count]||'');
       prevImg.alt='Previous photo';nextImg.alt='Next photo';
     };
     const reset=()=>{
@@ -2890,12 +2892,12 @@ body{
   document.head.appendChild(style);
 })();
 
-// Jasper's Plant Room v4.41.0 — lightweight reference thumbnails.
+// Jasper's Plant Room v4.41.2 — lightweight reference thumbnails.
 (function v441LightweightThumbnails(){
   const BUCKET='plant-media';
   const THUMB_EDGE=640;
   const THUMB_QUALITY=.72;
-  const AUTO_KEY='jasper-v441-thumbnail-preparation';
+  const AUTO_KEY='jasper-v4412-thumbnail-preparation';
   const originalToThumb=new Map();
   let running=false,cancelled=false,cloudWrapped=false;
 
@@ -2934,6 +2936,26 @@ body{
   function publicThumb(path){
     return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
   }
+  function storagePathFromPublicUrl(value){
+    const marker=`/storage/v1/object/public/${BUCKET}/`;
+    try{
+      const pathname=new URL(String(value||''),location.href).pathname;
+      const index=pathname.indexOf(marker);
+      return index<0?'':decodeURIComponent(pathname.slice(index+marker.length));
+    }catch{return '';}
+  }
+  function locationThumbPath(value){
+    const path=String(value||'').includes('/storage/v1/object/public/')?
+      storagePathFromPublicUrl(value):String(value||'');
+    if(!path||!path.includes('/locations/')||path.includes('/locations/thumbs/')||path.includes('/thumbs/'))return '';
+    const slash=path.lastIndexOf('/'),dot=path.lastIndexOf('.');
+    const stem=path.slice(slash+1,dot>slash?dot:undefined);
+    return `${path.slice(0,slash)}/thumbs/${stem}.thumb.jpg`;
+  }
+  function locationThumbUrl(value){
+    const path=locationThumbPath(value);
+    return path?publicThumb(path):'';
+  }
   function originalForBase(row){
     return typeof resolveAsset==='function'?resolveAsset(row.asset_path):row.asset_path;
   }
@@ -2946,8 +2968,15 @@ body{
     (db.basePhotoMeta||[]).forEach(row=>{
       if(row?.asset_path&&row.thumbnail_path)originalToThumb.set(String(originalForBase(row)),publicThumb(row.thumbnail_path));
     });
+    (db.locations||[]).forEach(row=>{
+      const source=row?.photo&&typeof resolveAsset==='function'?resolveAsset(row.photo):row?.photo;
+      const thumb=source&&locationThumbUrl(source);
+      if(source&&thumb)originalToThumb.set(String(source),thumb);
+    });
     applyThumbs(document);
   }
+  window.plantThumbnailUrl=url=>originalToThumb.get(String(url||''))||locationThumbUrl(url)||url||'';
+  window.plantLocationThumbPath=locationThumbPath;
   function isFullViewerImage(img){
     return !!img.closest('#photoLightbox,#growthPhotoViewer')||
       img.matches('#photoLightboxImg,#growthViewImg,.v432-photo-clone');
@@ -2955,10 +2984,19 @@ body{
   function applyThumb(img){
     if(!(img instanceof HTMLImageElement)||isFullViewerImage(img))return;
     const source=String(img.getAttribute('src')||img.currentSrc||img.src||'');
-    const thumb=originalToThumb.get(source);
-    if(!thumb||source===thumb)return;
+    const original=img.dataset.fullSrc||source;
+    const thumb=originalToThumb.get(original)||locationThumbUrl(original);
+    if(thumb&&original!==thumb&&img.dataset.v441ThumbFallback!=='1'){
+      img.dataset.v441ThumbFallback='1';
+      img.addEventListener('error',()=>{
+        const fallback=img.dataset.fullSrc,failed=String(img.getAttribute('src')||'');
+        if(fallback&&failed&&fallback!==failed){img.dataset.v441ThumbFailed=failed;img.src=fallback;}
+      });
+    }
+    if(!thumb||source===thumb||img.dataset.v441ThumbFailed===thumb)return;
     img.decoding='async';
     if(!img.matches('#mainPhoto,.gallery-main')){img.loading='lazy';img.setAttribute('fetchpriority','low');}
+    img.dataset.fullSrc=source;
     img.src=thumb;
   }
   function applyThumbs(root){
@@ -2985,7 +3023,7 @@ body{
     }
   }
   function wrapRenderers(){
-    ['renderAll','renderQueue','renderPlants','renderLocations','openPlant'].forEach(name=>{
+    ['renderAll','renderQueue','renderPlants','renderLocations','openPlant','setPlantPreview'].forEach(name=>{
       const current=window[name];
       if(typeof current!=='function'||current.v441LightweightThumbnails)return;
       const wrapped=function(){
@@ -3028,14 +3066,16 @@ body{
     if(!output)throw new Error('The thumbnail could not be encoded.');
     return output;
   }
-  async function fetchOriginal(row,base){
-    const source=base?originalForBase(row):row.url;
+  window.plantMakeThumbnail=makeThumbnail;
+  async function fetchOriginal(row,base,locationPhoto=false){
+    const source=locationPhoto?(typeof resolveAsset==='function'?resolveAsset(row.photo):row.photo):
+      (base?originalForBase(row):row.url);
     try{
       const response=await fetch(source,{cache:'force-cache'});
       if(!response.ok)throw new Error(`Source photo returned ${response.status}.`);
       return await response.blob();
     }catch(error){
-      if(base||!row.storage_path)throw error;
+      if(base||locationPhoto||!row.storage_path)throw error;
       const fallback=await sb.storage.from(BUCKET).download(row.storage_path);
       if(fallback.error)throw fallback.error;
       if(!fallback.data)throw error;
@@ -3054,15 +3094,20 @@ body{
     if(result.error)throw result.error;
     row.thumbnail_path=path;
   }
-  async function prepareRow(row,base){
+  async function prepareRow(row,base,locationPhoto=false){
     let lastError=null;
     for(let attempt=1;attempt<=3;attempt++){
       try{
-        const path=thumbPath(row,base);
-        const source=await fetchOriginal(row,base);
+        const path=locationPhoto?locationThumbPath(row.photo):thumbPath(row,base);
+        if(!path)throw new Error('No derivative path is available for this photo.');
+        if(locationPhoto){
+          const existing=await fetch(publicThumb(path),{method:'HEAD',cache:'no-store'});
+          if(existing.ok)return;
+        }
+        const source=await fetchOriginal(row,base,locationPhoto);
         const thumb=await makeThumbnail(source);
         await uploadThumbnail(path,thumb);
-        await saveThumbnailPath(row,base,path);
+        if(!locationPhoto)await saveThumbnailPath(row,base,path);
         rebuildMap();
         return;
       }catch(error){
@@ -3079,7 +3124,9 @@ body{
     const bundled=(db.basePhotoMeta||[])
       .filter(row=>row?.id&&row.plant_id&&row.asset_path&&!row.thumbnail_path&&!row.hidden&&!row.purged)
       .map(row=>({row,base:true}));
-    return [...cloud,...bundled];
+    const locations=(db.locations||[]).filter(row=>row?.id&&row.photo)
+      .map(row=>({row,base:false,locationPhoto:true}));
+    return [...cloud,...bundled,...locations];
   }
   function waitForVisible(){
     if(!document.hidden)return Promise.resolve();
@@ -3130,8 +3177,8 @@ body{
       if(cancelled)break;
       await waitForVisible();
       dlg.querySelector('.v441-thumb-status').textContent=
-        `Preparing ${completed+1} of ${work.length} · ${item.base?'bundled':'cloud'} photo`;
-      try{await prepareRow(item.row,item.base);completed++;}
+        `Preparing ${completed+1} of ${work.length} · ${item.locationPhoto?'location':(item.base?'bundled':'cloud')} photo`;
+      try{await prepareRow(item.row,item.base,item.locationPhoto);completed++;}
       catch(error){failed++;console.warn('Thumbnail preparation skipped one photo',error);}
       progress.value=completed+failed;
       await pause();
@@ -3251,7 +3298,7 @@ body{
     }
   }
   let queued=false;
-  function sync(){queued=false;wrapRenderers();wrapCloud();installUploads();installActions();}
+  function sync(){queued=false;wrapRenderers();wrapCloud();installUploads();installActions();rebuildMap();}
   function schedule(){if(queued)return;queued=true;requestAnimationFrame(sync);}
   sync();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});

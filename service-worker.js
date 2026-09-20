@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.41.1 — resilient thumbnail conversion */
-const CACHE_NAME='jasper-plant-room-shell-v4.41.1';
+/* Jasper's Plant Room v4.41.2 — thumbnail delivery enforcement */
+const CACHE_NAME='jasper-plant-room-shell-v4.41.2';
 const PHOTO_CACHE_NAME='jasper-plant-room-photos-v1';
 const PLANT_MEDIA_ORIGIN='https://vslyrabiqgbgbcqgooxb.supabase.co';
 const SHELL=[
@@ -9,7 +9,7 @@ const SHELL=[
   './pwa-icon-512.png',
   './apple-touch-icon.png',
   './v46-pwa-shell.js?v=4.15.0',
-  './v47-mobile-navigation.js?v=4.8.0',
+  './v47-mobile-navigation.js?v=4.41.2',
   './v25-photo-viewer.js?v=3.8.0',
   './v30-growth-gallery.js?v=3.0.0'
 ];
