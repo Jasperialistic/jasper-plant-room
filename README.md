@@ -9,4 +9,4 @@ Cloud-synced plant collection and care dashboard.
 
 The deploy file is `index.html` in the repository root.
 
-Current local milestone: v4.42.0. See [the v4.42 audit](docs/milestone-v4.42-audit.md) for the production architecture, egress measurements, upload contract, known debt, and release gates.
+Current local milestone: v4.43.0, building an organic premium KEMURI experience over the v4.42 performance and media foundation. See [the v4.42 audit](docs/milestone-v4.42-audit.md) for the production architecture, egress measurements, upload contract, known debt, and release gates.

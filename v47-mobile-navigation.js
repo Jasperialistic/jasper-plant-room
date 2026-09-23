@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.42.0 — media pipeline and KEMURI foundation */
+/* Jasper's Plant Room v4.43.0 — media pipeline and organic KEMURI experience */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -884,7 +884,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.42.0';
+  const VERSION='v4.43.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2435,6 +2435,7 @@ body{
   releases.unshift({"version":"4.41.1","date":"6 Sep 2026","title":"Thumbnail conversion recovery","changes":["Added a second browser image decoder for older JPEG encodings.","Retried transient download, conversion and upload failures up to three times with a short cooldown.","Added an authenticated Storage download fallback while preserving completed thumbnails and processing only the 22 remaining photos."]});
   releases.unshift({"version":"4.41.2","date":"20 Sep 2026","title":"Thumbnail delivery enforcement","changes":["Installed the media-delivery patches before the first cloud render so Dashboard, Plants, Gallery and Growth lists use existing lightweight derivatives on initial load.","Kept Gallery preview changes on thumbnails instead of briefly requesting originals.","Limited the mobile full-screen carousel to the deliberately opened original while adjacent swipe previews use thumbnails."]});
   releases.unshift({"version":"4.42.0","date":"23 Sep 2026","title":"KEMURI performance foundation","changes":["Externalized bundled originals so the app shell no longer downloads megabytes of embedded images on every online launch.","Added bounded, retryable multi-photo uploads with per-item progress and metadata confirmation.","Introduced the shared KEMURI visual foundation and reduced mobile glass/compositing cost."]});
+  releases.unshift({"version":"4.43.0","date":"23 Sep 2026","title":"Organic KEMURI experience","changes":["Added a subtle layered green-smoke atmosphere with dark organic depth while keeping plant imagery dominant.","Introduced glass-like cards, elevated photo surfaces and restrained spring motion across navigation, galleries and dialogs.","Added tactile press feedback and supported-device vibration while preserving reduced-motion and mobile heat safeguards."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
