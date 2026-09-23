@@ -8,3 +8,5 @@ Cloud-synced plant collection and care dashboard.
 - The website frontend is published with GitHub Pages.
 
 The deploy file is `index.html` in the repository root.
+
+Current local milestone: v4.42.0. See [the v4.42 audit](docs/milestone-v4.42-audit.md) for the production architecture, egress measurements, upload contract, known debt, and release gates.

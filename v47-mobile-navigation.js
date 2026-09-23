@@ -1,4 +1,4 @@
-/* Jasper's Plant Room v4.41.2 — thumbnail delivery enforcement */
+/* Jasper's Plant Room v4.42.0 — media pipeline and KEMURI foundation */
 (function(){
   const mq=window.matchMedia('(max-width:700px)');
   let syncQueued=false;
@@ -745,6 +745,7 @@
       return file;
     }
   }
+  window.plantOptimizeUpload=optimizeUpload;
 
   function wrapStorageUploads(){
     if(typeof sb==='undefined'||!sb?.storage||sb.storage.v440BandwidthSaver)return;
@@ -756,10 +757,11 @@
       api.upload=async function(path,file,options={}){
         const mediaPath=String(path||'');
         const shouldOptimize=/(?:^|\/)(?:gallery|growth|zones?)(?:\/|$)/i.test(mediaPath);
-        const prepared=shouldOptimize?await optimizeUpload(file):file;
+        const {plantPrepared=false,...uploadOptions}=options||{};
+        const prepared=shouldOptimize&&!plantPrepared?await optimizeUpload(file):file;
         return originalUpload(path,prepared,{
-          ...options,
-          contentType:prepared?.type||options.contentType,
+          ...uploadOptions,
+          contentType:prepared?.type||uploadOptions.contentType,
           cacheControl:'31536000'
         });
       };
@@ -882,7 +884,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v4.41.2';
+  const VERSION='v4.42.0';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -2432,6 +2434,7 @@ body{
   releases.unshift({"version":"4.41.0","date":"6 Sep 2026","title":"Lightweight photo library","changes":["Added dedicated 640px reference thumbnails for collection cards, Gallery grids and Growth Progress lists.","Kept full-resolution originals reserved for the enlarged Gallery and Growth photo viewers.","Added a one-time, low-impact desktop thumbnail preparation task with visible progress and immediate thumbnail creation for future uploads."]});
   releases.unshift({"version":"4.41.1","date":"6 Sep 2026","title":"Thumbnail conversion recovery","changes":["Added a second browser image decoder for older JPEG encodings.","Retried transient download, conversion and upload failures up to three times with a short cooldown.","Added an authenticated Storage download fallback while preserving completed thumbnails and processing only the 22 remaining photos."]});
   releases.unshift({"version":"4.41.2","date":"20 Sep 2026","title":"Thumbnail delivery enforcement","changes":["Installed the media-delivery patches before the first cloud render so Dashboard, Plants, Gallery and Growth lists use existing lightweight derivatives on initial load.","Kept Gallery preview changes on thumbnails instead of briefly requesting originals.","Limited the mobile full-screen carousel to the deliberately opened original while adjacent swipe previews use thumbnails."]});
+  releases.unshift({"version":"4.42.0","date":"23 Sep 2026","title":"KEMURI performance foundation","changes":["Externalized bundled originals so the app shell no longer downloads megabytes of embedded images on every online launch.","Added bounded, retryable multi-photo uploads with per-item progress and metadata confirmation.","Introduced the shared KEMURI visual foundation and reduced mobile glass/compositing cost."]});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`
@@ -3191,16 +3194,18 @@ body{
   }
 
   async function uploadPair(path,file){
-    const thumb=await makeThumbnail(file);
+    const prepared=typeof window.plantOptimizeUpload==='function'?
+      await window.plantOptimizeUpload(file):file;
+    const thumb=await makeThumbnail(prepared);
     const tPath=path.replace(/\/(?:gallery|growth)\//i,'/thumbs/').replace(/\.[^/.]+$/,'')+'.thumb.jpg';
-    const original=await sb.storage.from(BUCKET).upload(path,file,{
-      contentType:file.type,cacheControl:'31536000',upsert:false
+    const original=await sb.storage.from(BUCKET).upload(path,prepared,{
+      contentType:prepared.type||file.type,cacheControl:'31536000',upsert:false,plantPrepared:true
     });
-    if(original.error)throw original.error;
-    try{await uploadThumbnail(tPath,thumb);}
-    catch(error){await sb.storage.from(BUCKET).remove([path]);throw error;}
+    if(original.error&&!/already exists|duplicate/i.test(original.error.message||''))throw original.error;
+    await uploadThumbnail(tPath,thumb);
     return tPath;
   }
+  window.plantUploadPair=uploadPair;
   async function uploadNewPlantPhotosV441(plantId,files,photoDate){
     let uploaded=0;
     for(let i=0;i<files.length;i++){

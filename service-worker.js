@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.41.2 — thumbnail delivery enforcement */
-const CACHE_NAME='jasper-plant-room-shell-v4.41.2';
+/* Jasper's Plant Room v4.42.0 — KEMURI performance foundation */
+const CACHE_NAME='jasper-plant-room-shell-v4.42.0';
 const PHOTO_CACHE_NAME='jasper-plant-room-photos-v1';
 const PLANT_MEDIA_ORIGIN='https://vslyrabiqgbgbcqgooxb.supabase.co';
 const SHELL=[
@@ -8,10 +8,31 @@ const SHELL=[
   './pwa-icon-192.png',
   './pwa-icon-512.png',
   './apple-touch-icon.png',
-  './v46-pwa-shell.js?v=4.15.0',
-  './v47-mobile-navigation.js?v=4.41.2',
   './v25-photo-viewer.js?v=3.8.0',
-  './v30-growth-gallery.js?v=3.0.0'
+  './v26-photo-fit.js?v=2.6.0',
+  './v27-permanent-delete.js?v=2.7.0',
+  './v28-chatgpt-share.js?v=2.9.0',
+  './v30-growth-gallery.js?v=3.0.0',
+  './v31-telegram-share.js?v=3.1.0',
+  './v32-jasper-jungle-bot.js?v=3.2.0',
+  './v33-telegram-inbound.js?v=3.3.0',
+  './v34-plant-aliases.js?v=3.4.0',
+  './v35-telegram-reference-packet.js?v=3.5.0',
+  './v36-ai-review.js?v=3.7.0',
+  './v36-mobile-gallery.js?v=3.9.0',
+  './v37-mobile-plant-screen.js?v=4.0.0',
+  './v38-full-plant-editor.js?v=4.1.0',
+  './v39-editor-polish.js?v=4.2.0',
+  './v40-editor-access-tweaks.js?v=4.2.1',
+  './v41-desktop-gallery-wheel.js?v=4.3.0',
+  './v42-desktop-gallery-menu.js?v=4.3.1',
+  './v43-desktop-gallery-menu-toplayer.js?v=4.3.3',
+  './v44-add-plant-presets-light.js?v=4.4.1',
+  './v45-location-light-link.js?v=4.5.2',
+  './v46-pwa-shell.js?v=4.15.0',
+  './v47-mobile-navigation.js?v=4.42.0',
+  './v48-upload-queue.js?v=4.42.0',
+  './v48-kemuri.js?v=4.42.0'
 ];
 
 self.addEventListener('install',event=>{
@@ -72,14 +93,13 @@ self.addEventListener('fetch',event=>{
   if(/\.(?:js|css|png|jpg|jpeg|svg|webp|ico|webmanifest)$/i.test(url.pathname)){
     event.respondWith((async()=>{
       const cached=await caches.match(req);
-      const network=fetch(req,{cache:'reload'}).then(response=>{
-        if(response&&response.ok){
-          const copy=response.clone();
-          caches.open(CACHE_NAME).then(cache=>cache.put(req,copy));
-        }
-        return response;
-      }).catch(()=>null);
-      return cached || (await network) || Response.error();
+      if(cached)return cached;
+      const response=await fetch(req).catch(()=>null);
+      if(response&&response.ok){
+        const copy=response.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(req,copy));
+      }
+      return response || Response.error();
     })());
   }
 });
