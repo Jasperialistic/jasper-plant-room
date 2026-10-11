@@ -66,6 +66,30 @@ data class PlantBasePhoto(
     val purged: Boolean? = null,
 )
 
+@Serializable
+data class CareLogEntry(
+    val id: String? = null,
+    @SerialName("plant_id") val plantId: String? = null,
+    @SerialName("care_date") val careDate: String? = null,
+    @SerialName("plant_name") val plantName: String? = null,
+    val action: String? = null,
+    val details: String? = null,
+    val location: String? = null,
+)
+
+@Serializable
+data class GrowZone(
+    val id: String? = null,
+    val name: String,
+    val details: String? = null,
+    val humidity: String? = null,
+    val par: String? = null,
+    @SerialName("grow_lights") val growLights: String? = null,
+    val notes: String? = null,
+    @SerialName("photo_asset_path") val photoAssetPath: String? = null,
+    val icon: String? = null,
+)
+
 /**
  * Shared Plant Room authority: the same Supabase project, tables and RLS as the
  * web app. Only the public anon key is embedded (RLS enforces access); no
@@ -75,13 +99,26 @@ object PlantRepository {
 
     private const val WEB_ASSET_BASE = "https://jasperialistic.github.io/jasper-plant-room/"
 
-    val client: SupabaseClient = createSupabaseClient(
-        supabaseUrl = BuildConfig.SUPABASE_URL,
-        supabaseKey = BuildConfig.SUPABASE_ANON_KEY,
-    ) {
-        install(Auth)
-        install(Postgrest)
-        install(Storage)
+    /** Set once from the Activity; enables persistent owner sessions. */
+    fun initialize(context: android.content.Context) {
+        if (!::appContext.isInitialized) appContext = context.applicationContext
+    }
+
+    private lateinit var appContext: android.content.Context
+
+    val client: SupabaseClient by lazy {
+        createSupabaseClient(
+            supabaseUrl = BuildConfig.SUPABASE_URL,
+            supabaseKey = BuildConfig.SUPABASE_ANON_KEY,
+        ) {
+            install(Auth) {
+                if (::appContext.isInitialized) {
+                    sessionManager = PersistentSessionManager(appContext)
+                }
+            }
+            install(Postgrest)
+            install(Storage)
+        }
     }
 
     val isAuthenticated: Boolean
@@ -98,6 +135,16 @@ object PlantRepository {
 
     suspend fun loadPlants(): List<Plant> =
         client.postgrest["plants"].select().decodeList<Plant>()
+
+    suspend fun loadGrowZones(): List<GrowZone> =
+        client.postgrest["grow_zones"]
+            .select { order("sort_order", Order.ASCENDING); order("name", Order.ASCENDING) }
+            .decodeList<GrowZone>()
+
+    suspend fun loadCareLog(): List<CareLogEntry> =
+        client.postgrest["care_log"]
+            .select { order("care_date", Order.DESCENDING) }
+            .decodeList<CareLogEntry>()
 
     /** Gallery and growth rows for one plant; ordering mirrors the web comparator. */
     suspend fun loadPhotos(plantId: String): List<PlantPhoto> =

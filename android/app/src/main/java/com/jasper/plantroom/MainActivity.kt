@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,12 +19,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,13 +44,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import androidx.compose.ui.unit.sp
+import com.jasper.plantroom.net.CareLogEntry
+import com.jasper.plantroom.net.GrowZone
 import com.jasper.plantroom.net.Plant
 import com.jasper.plantroom.net.PlantRepository
+import com.jasper.plantroom.ui.CareLogRow
+import com.jasper.plantroom.ui.Chip
+import com.jasper.plantroom.ui.EmptyState
+import com.jasper.plantroom.ui.PlantPhotoCard
+import com.jasper.plantroom.ui.PlantRules
+import com.jasper.plantroom.ui.QueueRow
+import com.jasper.plantroom.ui.StatTile
+import com.jasper.plantroom.ui.statusLabel
 import com.jasper.plantroom.ui.theme.NoirColors
 import com.jasper.plantroom.ui.theme.NoirTheme
 import kotlinx.coroutines.launch
@@ -54,6 +69,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PlantRepository.initialize(this) // enables the persistent owner session
         setContent {
             NoirTheme {
                 PlantRoomApp()
@@ -63,15 +79,27 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Public visitors browse the collection with anon RLS reads (same contract as
- * the web app). Owner sign-in unlocks write actions. Navigation is state-based
- * with saveable state so fold/unfold recreation preserves the open plant.
+ * Guren's Garden native shell: mirrors the mobile web app's structure and
+ * functions (dashboard, plants, care log, locations, to-profile) one-to-one,
+ * wearing the accepted Noir palette. Public visitors browse with anon RLS
+ * reads; owner sign-in persists across launches and unlocks write actions.
  */
 private sealed interface ScreenState {
     data object Loading : ScreenState
-    data class Collection(val plants: List<Plant>, val owner: Boolean, val covers: Map<String, String?>) : ScreenState
+    data class Collection(
+        val plants: List<Plant>,
+        val owner: Boolean,
+        val covers: Map<String, String?>,
+        val careLog: List<CareLogEntry>,
+        val zones: List<GrowZone>,
+    ) : ScreenState
     data object SignIn : ScreenState
     data class Failed(val message: String) : ScreenState
+}
+
+private enum class Tab(val label: String) {
+    Dashboard("Dashboard"), Plants("Plants"), CareLog("Care log"),
+    Locations("Locations"), Profile("To profile")
 }
 
 @Composable
@@ -90,7 +118,10 @@ fun PlantRoomApp() {
                 val covers = (cloud.keys + base.keys).associateWith { id ->
                     PlantRepository.coverUrl(cloud[id] ?: emptyList(), base[id] ?: emptyList())
                 }
-                ScreenState.Collection(plants, PlantRepository.isAuthenticated, covers)
+                // Care log / zones are supporting views: degrade softly on failure.
+                val careLog = runCatching { PlantRepository.loadCareLog() }.getOrDefault(emptyList())
+                val zones = runCatching { PlantRepository.loadGrowZones() }.getOrDefault(emptyList())
+                ScreenState.Collection(plants, PlantRepository.isAuthenticated, covers, careLog, zones)
             } catch (error: Exception) {
                 ScreenState.Failed(error.message ?: "Unknown error")
             }
@@ -99,27 +130,30 @@ fun PlantRoomApp() {
 
     LaunchedEffect(Unit) { load() }
 
-    val openPlant = (state as? ScreenState.Collection)?.plants?.firstOrNull { it.id == openPlantId }
-    if (openPlant != null) {
+    val collection = state as? ScreenState.Collection
+    val openPlant = collection?.plants?.firstOrNull { it.id == openPlantId }
+    if (openPlant != null && collection != null) {
         // Native Back returns to the collection instead of finishing the activity.
         androidx.activity.compose.BackHandler { openPlantId = null }
         PlantDetailScreen(
             plant = openPlant,
-            owner = (state as? ScreenState.Collection)?.owner == true,
+            owner = collection.owner,
             onBack = { openPlantId = null },
         )
         return
     }
 
     when (val current = state) {
-        ScreenState.Loading -> FullText("Loading collection…")
+        ScreenState.Loading -> FullText("Loading the garden…")
         ScreenState.SignIn -> AuthScreen(
             onSignedIn = { load() },
             onCancel = { load() },
         )
-        is ScreenState.Collection -> CollectionScreen(
+        is ScreenState.Collection -> ShellScreen(
             plants = current.plants,
             covers = current.covers,
+            careLog = current.careLog,
+            zones = current.zones,
             owner = current.owner,
             onOpenPlant = { openPlantId = it },
             onOwnerSignIn = { state = ScreenState.SignIn },
@@ -137,6 +171,350 @@ private fun FullText(text: String) {
 }
 
 @Composable
+private fun ShellScreen(
+    plants: List<Plant>,
+    covers: Map<String, String?>,
+    careLog: List<CareLogEntry>,
+    zones: List<GrowZone>,
+    owner: Boolean,
+    onOpenPlant: (String) -> Unit,
+    onOwnerSignIn: () -> Unit,
+    onRefresh: () -> Unit,
+) {
+    var tab by rememberSaveable { mutableStateOf(Tab.Dashboard.name) }
+    val current = Tab.valueOf(tab)
+    var showAddPlant by rememberSaveable { mutableStateOf(false) }
+
+    if (showAddPlant) {
+        com.jasper.plantroom.ui.AddPlantSheet(onDismiss = { saved ->
+            showAddPlant = false
+            if (saved) onRefresh()
+        })
+    }
+
+    BoxWithConstraints(Modifier.fillMaxSize().background(NoirColors.Noir)) {
+        Column(Modifier.fillMaxSize()) {
+            // ── topbar: Guren's Garden ─────────────────────────────────────
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 21.sp)
+                    Text(
+                        "collection · growth · care",
+                        color = NoirColors.Muted, fontSize = 11.sp, letterSpacing = 1.2.sp
+                    )
+                }
+                if (owner) {
+                    TextButton(onClick = { showAddPlant = true }) {
+                        Text("+ ADD PLANT", color = NoirColors.Champagne, fontSize = 11.5.sp, letterSpacing = 1.sp)
+                    }
+                }
+                TextButton(onClick = onOwnerSignIn) {
+                    Text(
+                        if (owner) "OWNER" else "SIGN IN",
+                        color = NoirColors.Champagne, fontSize = 11.5.sp, letterSpacing = 1.sp
+                    )
+                }
+            }
+            // ── tab row (web parity) ───────────────────────────────────────
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Tab.entries.filter { it != Tab.CareLog || owner }.forEach { t ->
+                    val active = t == current
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                if (active) Brush.verticalGradient(
+                                    listOf(NoirColors.Champagne, NoirColors.ChampagneHi)
+                                ) else Brush.verticalGradient(
+                                    listOf(NoirColors.CardTop, NoirColors.CardBottom)
+                                )
+                            )
+                            .clickable { tab = t.name }
+                            .padding(horizontal = 15.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            t.label,
+                            color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
+                            fontSize = 12.5.sp
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+
+            when (current) {
+                Tab.Dashboard -> DashboardView(plants, covers, careLog, owner, onOpenPlant, Modifier.weight(1f))
+                Tab.Plants -> PlantsView(plants, covers, onOpenPlant, Modifier.weight(1f))
+                Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
+                Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
+                Tab.Profile -> ProfileView(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/** Web dashboard mirror: hero, today card, stats, care queue, recent log. */
+@Composable
+private fun DashboardView(
+    plants: List<Plant>,
+    covers: Map<String, String?>,
+    careLog: List<CareLogEntry>,
+    owner: Boolean,
+    onOpenPlant: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val ranked = plants.sortedByDescending { PlantRules.daysSince(it.lastCare) }
+    val checkToday = plants.count { PlantRules.statusOf(it) == "check" }
+    val due = plants.count { PlantRules.statusOf(it) == "due" }
+    val reservoir = plants.count { PlantRules.statusOf(it) == "reservoir" }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Column(Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+                Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 30.sp)
+                Text(
+                    "Plants train patience. Good things come to those who wait.",
+                    color = NoirColors.Champagne, fontSize = 14.sp,
+                    fontStyle = FontStyle.Italic, modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+        // today card
+        item {
+            val top = ranked.firstOrNull()
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
+                    .padding(16.dp)
+            ) {
+                if (owner && top != null) {
+                    Text("Check ${top.name}", color = NoirColors.Ivory, fontSize = 17.sp)
+                    Text(
+                        "${top.group ?: "Plant"} · ${PlantRules.daysSince(top.lastCare)} days",
+                        color = NoirColors.ChampagneHi, fontSize = 12.5.sp
+                    )
+                    Text(
+                        "Last ${PlantRules.daysSince(top.lastCare)} · ${top.location ?: "Unassigned"}",
+                        color = NoirColors.Muted, fontSize = 12.sp
+                    )
+                } else {
+                    Text("${plants.size} specimens profiled", color = NoirColors.Ivory, fontSize = 17.sp)
+                    Text("The living collection.", color = NoirColors.Muted, fontSize = 12.5.sp)
+                }
+            }
+        }
+        // stats
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                if (owner) {
+                    StatTile("Profiled", plants.size.toString(), Modifier.weight(1f))
+                    StatTile("Check today", checkToday.toString(), Modifier.weight(1f))
+                    StatTile("Due", due.toString(), Modifier.weight(1f))
+                    StatTile("Reservoir", reservoir.toString(), Modifier.weight(1f))
+                } else {
+                    StatTile("Profiled", plants.size.toString(), Modifier.weight(1f))
+                    StatTile("Groups", plants.mapNotNull { it.group }.distinct().size.toString(), Modifier.weight(1f))
+                    StatTile("Zones", plants.mapNotNull { it.location }.distinct().size.toString(), Modifier.weight(1f))
+                    StatTile("Growth", careLog.size.toString(), Modifier.weight(1f))
+                }
+            }
+        }
+        // care queue (owner: ranked; visitor: first 12 by name)
+        item {
+            Text(
+                if (owner) "Care queue" else "The collection",
+                color = NoirColors.Ivory, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+        val queue = if (owner) ranked else plants.sortedBy { it.name }.take(12)
+        items(queue, key = { "q-${it.id}" }) { plant ->
+            QueueRow(plant, covers[plant.id]) { onOpenPlant(plant.id) }
+        }
+        // recent care log (owner)
+        if (owner && careLog.isNotEmpty()) {
+            item {
+                Text("Recent care", color = NoirColors.Ivory, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp))
+            }
+            items(careLog.take(5), key = { "c-${it.id ?: it.careDate}" }) { entry ->
+                CareLogRow(
+                    date = PlantRules.prettyDate(entry.careDate),
+                    action = entry.action ?: "Care",
+                    plant = entry.plantName ?: "—",
+                    details = entry.details ?: "",
+                    location = entry.location ?: "",
+                )
+            }
+        }
+    }
+}
+
+/** Web plant-card grid with search + status filters. */
+@Composable
+private fun PlantsView(
+    plants: List<Plant>,
+    covers: Map<String, String?>,
+    onOpenPlant: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var filter by rememberSaveable { mutableStateOf("All") }
+    val filters = listOf("All", "Check", "Medium", "Due", "Reservoir")
+
+    val filtered = plants.filter { plant ->
+        val matchesQuery = query.isBlank() ||
+            plant.name.contains(query, true) ||
+            (plant.group?.contains(query, true) == true) ||
+            (plant.location?.contains(query, true) == true)
+        val matchesFilter = filter == "All" || statusLabel(PlantRules.statusOf(plant)).startsWith(filter, true)
+        matchesQuery && matchesFilter
+    }
+
+    BoxWithConstraints(modifier) {
+        val columns = if (maxWidth >= 840.dp) 2 else 1
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column {
+                    OutlinedTextField(
+                        value = query, onValueChange = { query = it },
+                        label = { Text("Search name, group, zone") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        filters.forEach { f ->
+                            val active = f == filter
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(
+                                        if (active) Brush.verticalGradient(
+                                            listOf(NoirColors.Champagne, NoirColors.ChampagneHi)
+                                        ) else Brush.verticalGradient(
+                                            listOf(NoirColors.CardTop, NoirColors.CardBottom)
+                                        )
+                                    )
+                                    .clickable { filter = f }
+                                    .padding(horizontal = 13.dp, vertical = 7.dp)
+                            ) {
+                                Text(
+                                    f,
+                                    color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+            }
+            if (filtered.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyState(if (plants.isEmpty()) "No plants in the collection yet." else "No plants match “$query”.")
+                }
+            } else {
+                items(filtered, key = { it.id }) { plant ->
+                    PlantPhotoCard(plant, covers[plant.id]) { onOpenPlant(plant.id) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CareLogView(careLog: List<CareLogEntry>, modifier: Modifier = Modifier) {
+    if (careLog.isEmpty()) {
+        Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+            EmptyState("No care entries yet.")
+        }
+        return
+    }
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(careLog, key = { it.id ?: "${it.careDate}-${it.plantName}" }) { entry ->
+            CareLogRow(
+                date = PlantRules.prettyDate(entry.careDate),
+                action = entry.action ?: "Care",
+                plant = entry.plantName ?: "—",
+                details = entry.details ?: "",
+                location = entry.location ?: "",
+            )
+        }
+    }
+}
+
+@Composable
+private fun ZonesView(zones: List<GrowZone>, plants: List<Plant>, modifier: Modifier = Modifier) {
+    if (zones.isEmpty()) {
+        Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+            EmptyState("No grow zones defined.")
+        }
+        return
+    }
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(zones, key = { it.id ?: it.name }) { zone ->
+            val count = plants.count { it.location == zone.name }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
+                    .padding(16.dp)
+            ) {
+                Text(zone.name, color = NoirColors.Ivory, fontSize = 16.sp)
+                zone.details?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = NoirColors.Muted, fontSize = 12.5.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    zone.humidity?.takeIf { it.isNotBlank() }?.let { Chip("RH $it") }
+                    zone.par?.takeIf { it.isNotBlank() }?.let { Chip("PAR $it") }
+                    zone.growLights?.takeIf { it.isNotBlank() }?.let { Chip(it) }
+                    Chip("$count plants")
+                }
+            }
+        }
+    }
+}
+
+/** Web "To profile" view: backlog (currently empty in production). */
+@Composable
+private fun ProfileView(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+        EmptyState("Nothing waiting to be profiled.")
+    }
+}
+
+@Composable
 private fun AuthScreen(onSignedIn: () -> Unit, onCancel: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -149,7 +527,7 @@ private fun AuthScreen(onSignedIn: () -> Unit, onCancel: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Plant Room", style = MaterialTheme.typography.displayLarge, color = NoirColors.Ivory)
+        Text("Guren's Garden", style = MaterialTheme.typography.displayLarge, color = NoirColors.Ivory)
         Text("OWNER SIGN IN", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
         Spacer(Modifier.height(28.dp))
         OutlinedTextField(
@@ -188,120 +566,6 @@ private fun AuthScreen(onSignedIn: () -> Unit, onCancel: () -> Unit) {
         ) { Text(if (busy) "SIGNING IN…" else "SIGN IN") }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onCancel) { Text("CONTINUE AS VISITOR", color = NoirColors.Muted) }
-    }
-}
-
-@Composable
-private fun CollectionScreen(
-    plants: List<Plant>,
-    covers: Map<String, String?>,
-    owner: Boolean,
-    onOpenPlant: (String) -> Unit,
-    onOwnerSignIn: () -> Unit,
-    onRefresh: () -> Unit,
-) {
-    var query by rememberSaveable { mutableStateOf("") }
-    var showAddPlant by rememberSaveable { mutableStateOf(false) }
-    val filtered = plants.filter {
-        query.isBlank() || it.name.contains(query, ignoreCase = true) ||
-            (it.group?.contains(query, ignoreCase = true) == true) ||
-            (it.location?.contains(query, ignoreCase = true) == true)
-    }
-    if (showAddPlant) {
-        com.jasper.plantroom.ui.AddPlantSheet(onDismiss = { saved ->
-            showAddPlant = false
-            if (saved) onRefresh()
-        })
-    }
-
-    // Adaptive: two panes on the unfolded inner display, one on the Fold8 cover.
-    BoxWithConstraints(Modifier.fillMaxSize().background(NoirColors.Noir)) {
-        val expanded = maxWidth >= 840.dp
-        Column(Modifier.fillMaxSize().padding(horizontal = if (expanded) 32.dp else 16.dp, vertical = 24.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("THE COLLECTION", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
-                    Text(
-                        "${plants.size} specimens",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = NoirColors.Ivory,
-                    )
-                }
-                if (owner) {
-                    TextButton(onClick = { showAddPlant = true }) {
-                        Text("ADD PLANT", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
-                    }
-                }
-                TextButton(onClick = onOwnerSignIn) {
-                    Text(if (owner) "OWNER" else "OWNER SIGN IN", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = query, onValueChange = { query = it },
-                label = { Text("Search name, group, zone") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(16.dp))
-            if (filtered.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (plants.isEmpty()) "No plants in the collection yet." else "No plants match “$query”.",
-                        color = NoirColors.Muted, style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-            } else if (expanded) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PlantList(filtered, covers, onOpenPlant, Modifier.weight(1f))
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Text("Select a specimen", color = NoirColors.Muted, style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-            } else {
-                PlantList(filtered, covers, onOpenPlant, Modifier.fillMaxSize())
-            }
-        }
-    }
-}
-
-@Composable
-private fun PlantList(
-    plants: List<Plant>,
-    covers: Map<String, String?>,
-    onOpenPlant: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(plants, key = { it.id }) { plant ->
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = NoirColors.CardTop),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                modifier = Modifier.clickable { onOpenPlant(plant.id) },
-            ) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val cover = covers[plant.id]
-                    if (cover != null) {
-                        AsyncImage(
-                            model = cover,
-                            contentDescription = plant.name,
-                            contentScale = ContentScale.Crop,
-                            // Thumbnails at tile size; originals load only on demand.
-                            modifier = Modifier.width(64.dp).height(72.dp).clip(RoundedCornerShape(14.dp)),
-                        )
-                        Spacer(Modifier.width(14.dp))
-                    }
-                    Column {
-                        Text(plant.name, style = MaterialTheme.typography.titleMedium, color = NoirColors.Ivory)
-                        Text(
-                            listOfNotNull(plant.group, plant.location).joinToString(" · ").ifBlank { "Specimen" },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = NoirColors.ChampagneHi,
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

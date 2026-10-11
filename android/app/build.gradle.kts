@@ -58,6 +58,7 @@ dependencies {
         }
     }
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
 
@@ -74,6 +75,9 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:storage-kt:3.6.0")
     implementation("io.ktor:ktor-client-okhttp:3.4.3")
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
+    // Coil 3 splits network fetching into its own artifact — without it,
+    // AsyncImage silently renders nothing for http(s) URLs (the "no photos" bug).
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
