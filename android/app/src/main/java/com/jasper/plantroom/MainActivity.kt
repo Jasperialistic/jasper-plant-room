@@ -462,7 +462,7 @@ private fun PlantsView(
     var group by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
     var statusFilter by rememberSaveable { mutableStateOf("") }
-    var gridMode by rememberSaveable { mutableStateOf(false) } // Cards ⇄ Instagram grid
+    var gridMode by rememberSaveable { mutableStateOf(PlantRepository.getGridMode()) } // Cards ⇄ Instagram grid (persisted)
     var viewer by remember { mutableStateOf<Pair<List<PhotoSlide>, Int>?>(null) }
     viewer?.let { (slides, start) -> PhotoViewer(slides, start) { viewer = null } }
 
@@ -532,7 +532,10 @@ private fun PlantsView(
                                         if (active) Brush.verticalGradient(listOf(NoirColors.Champagne, NoirColors.ChampagneHi))
                                         else Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom))
                                     )
-                                    .clickable { gridMode = mode }
+                                    .clickable {
+                                        gridMode = mode
+                                        PlantRepository.setGridMode(mode)
+                                    }
                                     .padding(horizontal = 13.dp, vertical = 7.dp)
                             ) {
                                 Text(

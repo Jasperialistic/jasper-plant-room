@@ -133,6 +133,13 @@ object PlantRepository {
 
     suspend fun signOut() = client.auth.signOut()
 
+    /** Persisted UI preferences (survive tab switches and app restarts). */
+    private fun prefs() = appContext.getSharedPreferences("plantroom_prefs", android.content.Context.MODE_PRIVATE)
+    fun getGridMode(): Boolean = runCatching { prefs().getBoolean("plants_grid_mode", false) }.getOrDefault(false)
+    fun setGridMode(enabled: Boolean) {
+        runCatching { prefs().edit().putBoolean("plants_grid_mode", enabled).apply() }
+    }
+
     /**
      * Quick care from the dashboard, mirrored VERBATIM from the web addCare()
      * (index.html:1797) + saveCustomLog() date rules (index.html:1801):
