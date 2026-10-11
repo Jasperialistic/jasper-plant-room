@@ -45,7 +45,7 @@ test('v51 loads last before boot and its artwork is precached', () => {
   assert.notEqual(script, -1);
   assert.ok(v50 < script);
   assert.ok(script < boot);
-  assert.match(worker, /'\.\/v51-noir-premium\.js\?v=5\.1\.0'/);
+  assert.match(worker, /'\.\/v51-noir-premium\.js\?v=5\.1\.1'/);
   assert.match(worker, /'\.\/assets\/art\/wallpaper-leaves\.svg'/);
   assert.match(worker, /'\.\/assets\/art\/header-garden\.svg'/);
 });
