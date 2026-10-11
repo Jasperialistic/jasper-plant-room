@@ -92,6 +92,8 @@ private sealed interface ScreenState {
         val covers: Map<String, String?>,
         val careLog: List<CareLogEntry>,
         val zones: List<GrowZone>,
+        val galleryCount: Int,
+        val growthCount: Int,
     ) : ScreenState
     data object SignIn : ScreenState
     data class Failed(val message: String) : ScreenState
@@ -113,7 +115,8 @@ fun PlantRoomApp() {
         scope.launch {
             state = try {
                 val plants = PlantRepository.loadPlants()
-                val cloud = PlantRepository.loadAllPhotos().groupBy { it.plantId }
+                val photos = PlantRepository.loadAllPhotos()
+                val cloud = photos.groupBy { it.plantId }
                 val base = PlantRepository.loadAllBasePhotos().groupBy { it.plantId }
                 val covers = (cloud.keys + base.keys).associateWith { id ->
                     PlantRepository.coverUrl(cloud[id] ?: emptyList(), base[id] ?: emptyList())
@@ -121,7 +124,10 @@ fun PlantRoomApp() {
                 // Care log / zones are supporting views: degrade softly on failure.
                 val careLog = runCatching { PlantRepository.loadCareLog() }.getOrDefault(emptyList())
                 val zones = runCatching { PlantRepository.loadGrowZones() }.getOrDefault(emptyList())
-                ScreenState.Collection(plants, PlantRepository.isAuthenticated, covers, careLog, zones)
+                ScreenState.Collection(
+                    plants, PlantRepository.isAuthenticated, covers, careLog, zones,
+                    photos.count { it.kind == "gallery" }, photos.count { it.kind == "growth" },
+                )
             } catch (error: Exception) {
                 ScreenState.Failed(error.message ?: "Unknown error")
             }
@@ -154,6 +160,8 @@ fun PlantRoomApp() {
             covers = current.covers,
             careLog = current.careLog,
             zones = current.zones,
+            galleryCount = current.galleryCount,
+            growthCount = current.growthCount,
             owner = current.owner,
             onOpenPlant = { openPlantId = it },
             onOwnerSignIn = { state = ScreenState.SignIn },
@@ -176,6 +184,8 @@ private fun ShellScreen(
     covers: Map<String, String?>,
     careLog: List<CareLogEntry>,
     zones: List<GrowZone>,
+    galleryCount: Int,
+    growthCount: Int,
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
     onOwnerSignIn: () -> Unit,
@@ -252,7 +262,7 @@ private fun ShellScreen(
             Spacer(Modifier.height(10.dp))
 
             when (current) {
-                Tab.Dashboard -> DashboardView(plants, covers, careLog, owner, onOpenPlant, Modifier.weight(1f))
+                Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, Modifier.weight(1f))
                 Tab.Plants -> PlantsView(plants, covers, onOpenPlant, Modifier.weight(1f))
                 Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
                 Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
@@ -268,13 +278,20 @@ private fun DashboardView(
     plants: List<Plant>,
     covers: Map<String, String?>,
     careLog: List<CareLogEntry>,
+    galleryCount: Int,
+    growthCount: Int,
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val ranked = plants.sortedByDescending { PlantRules.daysSince(it.lastCare) }
-    val checkToday = plants.count { PlantRules.statusOf(it) == "check" }
-    val due = plants.count { PlantRules.statusOf(it) == "due" }
+    // web renderQueue rank: overdue > today > upcoming; then earliest nextCheck
+    val rank = mapOf("overdue" to 0, "today" to 1, "upcoming" to 2, "reservoir" to 3, "none" to 4)
+    val ranked = plants
+        .filter { PlantRules.statusOf(it) in setOf("overdue", "today", "upcoming") }
+        .sortedWith(compareBy({ rank[PlantRules.statusOf(it)] ?: 9 }, { it.nextCheck ?: "9999" }))
+        .take(12)
+    val checkToday = plants.count { PlantRules.statusOf(it) == "today" }
+    val overdue = plants.count { PlantRules.statusOf(it) == "overdue" }
     val reservoir = plants.count { PlantRules.statusOf(it) == "reservoir" }
 
     LazyColumn(
@@ -305,11 +322,12 @@ private fun DashboardView(
                 if (owner && top != null) {
                     Text("Check ${top.name}", color = NoirColors.Ivory, fontSize = 17.sp)
                     Text(
-                        "${top.group ?: "Plant"} · ${PlantRules.daysSince(top.lastCare)} days",
+                        "${top.location ?: "Plant room"}" +
+                            (top.nextCheck?.let { " · check ${PlantRules.prettyDate(it)}" } ?: ""),
                         color = NoirColors.ChampagneHi, fontSize = 12.5.sp
                     )
                     Text(
-                        "Last ${PlantRules.daysSince(top.lastCare)} · ${top.location ?: "Unassigned"}",
+                        "Last care ${PlantRules.prettyDate(top.lastCare)}",
                         color = NoirColors.Muted, fontSize = 12.sp
                     )
                 } else {
@@ -322,28 +340,31 @@ private fun DashboardView(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 if (owner) {
-                    StatTile("Profiled", plants.size.toString(), Modifier.weight(1f))
+                    StatTile("Plants profiled", plants.size.toString(), Modifier.weight(1f))
                     StatTile("Check today", checkToday.toString(), Modifier.weight(1f))
-                    StatTile("Due", due.toString(), Modifier.weight(1f))
-                    StatTile("Reservoir", reservoir.toString(), Modifier.weight(1f))
+                    StatTile("Overdue", overdue.toString(), Modifier.weight(1f))
+                    StatTile("Reservoir plants", reservoir.toString(), Modifier.weight(1f))
                 } else {
-                    StatTile("Profiled", plants.size.toString(), Modifier.weight(1f))
-                    StatTile("Groups", plants.mapNotNull { it.group }.distinct().size.toString(), Modifier.weight(1f))
-                    StatTile("Zones", plants.mapNotNull { it.location }.distinct().size.toString(), Modifier.weight(1f))
-                    StatTile("Growth", careLog.size.toString(), Modifier.weight(1f))
+                    StatTile("Plants profiled", plants.size.toString(), Modifier.weight(1f))
+                    StatTile("Plant groups", plants.mapNotNull { it.group }.distinct().size.toString(), Modifier.weight(1f))
+                    StatTile("Gallery photos", galleryCount.toString(), Modifier.weight(1f))
+                    StatTile("Growth photos", growthCount.toString(), Modifier.weight(1f))
                 }
             }
         }
         // care queue (owner: ranked; visitor: first 12 by name)
         item {
             Text(
-                if (owner) "Care queue" else "The collection",
+                "Collection highlights",
                 color = NoirColors.Ivory, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp)
             )
         }
         val queue = if (owner) ranked else plants.sortedBy { it.name }.take(12)
+        if (queue.isEmpty()) {
+            item { EmptyState("Nothing currently has a dated check.") }
+        }
         items(queue, key = { "q-${it.id}" }) { plant ->
-            QueueRow(plant, covers[plant.id]) { onOpenPlant(plant.id) }
+            QueueRow(plant, covers[plant.id], owner) { onOpenPlant(plant.id) }
         }
         // recent care log (owner)
         if (owner && careLog.isNotEmpty()) {
@@ -373,14 +394,20 @@ private fun PlantsView(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf("All") }
-    val filters = listOf("All", "Check", "Medium", "Due", "Reservoir")
+    val filters = listOf("All", "Due", "Upcoming", "Reservoir")
 
     val filtered = plants.filter { plant ->
         val matchesQuery = query.isBlank() ||
             plant.name.contains(query, true) ||
             (plant.group?.contains(query, true) == true) ||
             (plant.location?.contains(query, true) == true)
-        val matchesFilter = filter == "All" || statusLabel(PlantRules.statusOf(plant)).startsWith(filter, true)
+        val st = PlantRules.statusOf(plant)
+        val matchesFilter = when (filter) {
+            "Due" -> st in setOf("today", "overdue")
+            "Upcoming" -> st == "upcoming"
+            "Reservoir" -> st == "reservoir"
+            else -> true
+        }
         matchesQuery && matchesFilter
     }
 

@@ -26,35 +26,29 @@ import java.time.temporal.ChronoUnit
 private val ChipBg = Color(0x22C9B18A)
 
 /**
- * Care-date rules mirrored exactly from the web dashboard rule box:
- * Check = checked 0-3 days ago, Medium = 4-7 days, Due = past 7 days.
- * Reservoir plants (stanleyi / batik / snow queen) show Reservoir always.
+ * Care rules mirrored VERBATIM from the web (index.html:1653-1655):
+ * isReservoir = watering mode contains "reservoir";
+ * statusOf: no nextCheck -> none; past = overdue; today = today; future = upcoming.
  */
 object PlantRules {
 
     private val fmt = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
-    fun isReservoir(plant: Plant): Boolean {
-        val name = plant.name.lowercase()
-        return listOf("stanleyi", "batik", "snow queen").any { name.contains(it) }
-    }
+    fun isReservoir(plant: Plant): Boolean =
+        (plant.wateringMode ?: "").lowercase().contains("reservoir")
 
-    /** web statusOf(): "check" | "medium" | "due" | "reservoir" */
-    fun statusOf(plant: Plant): String = if (isReservoir(plant)) "reservoir" else {
-        val days = daysSince(plant.lastCare)
-        when {
-            days < 4 -> "check"
-            days <= 7 -> "medium"
-            else -> "due"
+    /** web statusOf(): "reservoir" | "none" | "overdue" | "today" | "upcoming" */
+    fun statusOf(plant: Plant): String {
+        if (isReservoir(plant)) return "reservoir"
+        val next = plant.nextCheck ?: return "none"
+        val diff = runCatching {
+            ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.parse(next.take(10)))
+        }.getOrDefault(0L)
+        return when {
+            diff < 0 -> "overdue"
+            diff == 0L -> "today"
+            else -> "upcoming"
         }
-    }
-
-    fun daysSince(iso: String?): Long {
-        if (iso.isNullOrBlank()) return 0
-        return runCatching {
-            val d = LocalDate.parse(iso.take(10))
-            ChronoUnit.DAYS.between(d, LocalDate.now()).coerceAtLeast(0)
-        }.getOrDefault(0)
     }
 
     fun prettyDate(iso: String?): String {
@@ -64,10 +58,10 @@ object PlantRules {
 }
 
 internal fun statusLabel(status: String): String = when (status) {
+    "overdue" -> "Overdue"
+    "today" -> "Check today"
     "reservoir" -> "Reservoir"
-    "check" -> "Check today"
-    "medium" -> "Medium"
-    else -> "Due"
+    else -> "Upcoming"
 }
 
 /** Photo card mirroring the web plant-card: photo top, name, sub, chips, care line. */
@@ -120,7 +114,8 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, onClick: () -> Unit) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Last care ${PlantRules.prettyDate(plant.lastCare)} · ${PlantRules.daysSince(plant.lastCare)} days",
+                    "Last care ${PlantRules.prettyDate(plant.lastCare)} · Next check " +
+                        (plant.nextCheck?.let { PlantRules.prettyDate(it) } ?: "Reservoir-based"),
                     color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -160,11 +155,10 @@ fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Care-queue row mirroring the web queue rows (thumb + name + status + days). */
+/** Care-queue row mirroring the web queue rows (thumb + name + status). */
 @Composable
-fun QueueRow(plant: Plant, photoUrl: String?, onClick: () -> Unit) {
+fun QueueRow(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () -> Unit) {
     val status = PlantRules.statusOf(plant)
-    val days = PlantRules.daysSince(plant.lastCare)
     Row(
         Modifier
             .fillMaxWidth()
@@ -188,14 +182,16 @@ fun QueueRow(plant: Plant, photoUrl: String?, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(plant.name, color = NoirColors.Ivory, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(plant.group, plant.location).joinToString(" · ").ifBlank { "Specimen" },
+                if (owner) "${plant.location ?: "Plant room"}" +
+                    (plant.nextCheck?.let { " · check ${PlantRules.prettyDate(it)}" } ?: "")
+                else listOfNotNull(plant.group, plant.location).joinToString(" · ").ifBlank { "Plant" },
                 color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
-        Spacer(Modifier.width(8.dp))
-        Chip(statusLabel(status))
-        Spacer(Modifier.width(8.dp))
-        Text("${days}d", color = NoirColors.ChampagneHi, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        if (owner) {
+            Spacer(Modifier.width(8.dp))
+            Chip(statusLabel(status))
+        }
     }
 }
 
