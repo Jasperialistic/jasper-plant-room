@@ -228,18 +228,8 @@ fun QueueRow(
             if (owner) {
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    QuickCareButton("Moist", onMoist)
+                    QuickCareButton("Still moist", onMoist)
                     QuickCareButton("Watered", onWatered)
-                    QuickCareButton("Reservoir", onReservoir)
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(NoirColors.CardBottom)
-                            .clickable(onClick = onCustom)
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text("＋", color = NoirColors.Champagne, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
                 }
             }
         }

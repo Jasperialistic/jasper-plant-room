@@ -130,8 +130,8 @@ fun PlantRoomApp() {
     var openPlantId by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    fun load() {
-        state = ScreenState.Loading
+    fun load(silent: Boolean = false) {
+        if (!silent) state = ScreenState.Loading
         scope.launch {
             state = try {
                 val plants = PlantRepository.loadPlants()
@@ -182,7 +182,7 @@ fun PlantRoomApp() {
             owner = current.owner,
             onOpenPlant = { openPlantId = it },
             onOwnerSignIn = { state = ScreenState.SignIn },
-            onRefresh = { load() },
+            onRefresh = { load(silent = true) },
         )
         is ScreenState.Failed -> FailureScreen(message = current.message, onRetry = { load() })
     }
