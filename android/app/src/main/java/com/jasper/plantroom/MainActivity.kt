@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,10 +55,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Public visitors browse the collection with anon RLS reads (same contract as
+ * the web app). Owner sign-in unlocks write actions later in the milestone.
+ */
 private sealed interface ScreenState {
     data object Loading : ScreenState
-    data object SignedOut : ScreenState
-    data class Collection(val plants: List<Plant>) : ScreenState
+    data class Collection(val plants: List<Plant>, val owner: Boolean) : ScreenState
+    data object SignIn : ScreenState
     data class Failed(val message: String) : ScreenState
 }
 
@@ -69,8 +75,7 @@ fun PlantRoomApp() {
         state = ScreenState.Loading
         scope.launch {
             state = try {
-                if (!PlantRepository.isAuthenticated) ScreenState.SignedOut
-                else ScreenState.Collection(PlantRepository.loadPlants())
+                ScreenState.Collection(PlantRepository.loadPlants(), PlantRepository.isAuthenticated)
             } catch (error: Exception) {
                 ScreenState.Failed(error.message ?: "Unknown error")
             }
@@ -81,21 +86,28 @@ fun PlantRoomApp() {
 
     when (val current = state) {
         ScreenState.Loading -> FullText("Loading collection…")
-        ScreenState.SignedOut -> AuthScreen(onSignedIn = { load() })
-        is ScreenState.Collection -> CollectionScreen(plants = current.plants)
+        ScreenState.SignIn -> AuthScreen(
+            onSignedIn = { load() },
+            onCancel = { load() },
+        )
+        is ScreenState.Collection -> CollectionScreen(
+            plants = current.plants,
+            owner = current.owner,
+            onOwnerSignIn = { state = ScreenState.SignIn },
+        )
         is ScreenState.Failed -> FailureScreen(message = current.message, onRetry = { load() })
     }
 }
 
 @Composable
 private fun FullText(text: String) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(NoirColors.Noir), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(NoirColors.Noir), contentAlignment = Alignment.Center) {
         Text(text, color = NoirColors.Muted, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 @Composable
-private fun AuthScreen(onSignedIn: () -> Unit) {
+private fun AuthScreen(onSignedIn: () -> Unit, onCancel: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -144,26 +156,39 @@ private fun AuthScreen(onSignedIn: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = NoirColors.Champagne, contentColor = NoirColors.OnChampagne),
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) { Text(if (busy) "SIGNING IN…" else "SIGN IN") }
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onCancel) { Text("CONTINUE AS VISITOR", color = NoirColors.Muted) }
     }
 }
 
 @Composable
-private fun CollectionScreen(plants: List<Plant>) {
+private fun CollectionScreen(plants: List<Plant>, owner: Boolean, onOwnerSignIn: () -> Unit) {
     // Adaptive: two panes on the unfolded inner display, one on the Fold8 cover.
     BoxWithConstraints(Modifier.fillMaxSize().background(NoirColors.Noir)) {
         val expanded = maxWidth >= 840.dp
         Column(Modifier.fillMaxSize().padding(horizontal = if (expanded) 32.dp else 16.dp, vertical = 24.dp)) {
-            Text("THE COLLECTION", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
-            Text(
-                "${plants.size} specimens",
-                style = MaterialTheme.typography.headlineMedium,
-                color = NoirColors.Ivory,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("THE COLLECTION", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
+                    Text(
+                        "${plants.size} specimens",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = NoirColors.Ivory,
+                    )
+                }
+                TextButton(onClick = onOwnerSignIn) {
+                    Text(if (owner) "OWNER" else "OWNER SIGN IN", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
+                }
+            }
             Spacer(Modifier.height(16.dp))
-            if (expanded) {
+            if (plants.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No plants match this view.", color = NoirColors.Muted, style = MaterialTheme.typography.bodyLarge)
+                }
+            } else if (expanded) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     PlantList(plants, Modifier.weight(1f))
-                    BoxWithConstraints(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         Text("Select a specimen", color = NoirColors.Muted, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
