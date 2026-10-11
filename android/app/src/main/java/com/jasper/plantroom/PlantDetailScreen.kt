@@ -49,8 +49,10 @@ private sealed interface DetailState {
 @Composable
 fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
     var state by remember { mutableStateOf<DetailState>(DetailState.Loading) }
+    var showUpload by remember { mutableStateOf(false) }
+    var refreshTick by remember { mutableStateOf(0) }
 
-    LaunchedEffect(plant.id) {
+    LaunchedEffect(plant.id, refreshTick) {
         state = try {
             DetailState.Ready(
                 PlantRepository.loadPhotos(plant.id),
@@ -70,10 +72,26 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                 TextButton(onClick = onBack) { Text("‹ COLLECTION", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne) }
                 Spacer(Modifier.weight(1f))
                 if (owner) {
+                    TextButton(onClick = { showUpload = true }) {
+                        Text("ADD GROWTH PHOTOS", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
+                    }
                     TextButton(onClick = { /* Node 5 editing entry point */ }) {
                         Text("EDIT", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
                     }
                 }
+            }
+        }
+
+        if (showUpload) {
+            item {
+                com.jasper.plantroom.ui.GrowthUploadSheet(
+                    plantId = plant.id,
+                    plantName = plant.name,
+                    onDismiss = { refreshed ->
+                        showUpload = false
+                        if (refreshed) refreshTick++
+                    },
+                )
             }
         }
 
