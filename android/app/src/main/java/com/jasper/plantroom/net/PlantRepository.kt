@@ -170,7 +170,7 @@ object PlantRepository {
     }
 
     suspend fun loadPlants(): List<Plant> =
-        client.postgrest["plants"].select().decodeList<Plant>()
+        client.postgrest["plants"].select { order("name", Order.ASCENDING) }.decodeList<Plant>()
 
     suspend fun loadGrowZones(): List<GrowZone> =
         client.postgrest["grow_zones"]

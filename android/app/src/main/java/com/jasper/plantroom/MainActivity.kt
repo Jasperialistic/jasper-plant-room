@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -66,6 +67,7 @@ import com.jasper.plantroom.ui.EmptyState
 import com.jasper.plantroom.ui.PlantPhotoCard
 import com.jasper.plantroom.ui.PlantRules
 import com.jasper.plantroom.ui.QueueRow
+import com.jasper.plantroom.ui.SquareTile
 import com.jasper.plantroom.ui.StatTile
 import com.jasper.plantroom.ui.theme.NoirColors
 import com.jasper.plantroom.ui.theme.NoirTheme
@@ -375,19 +377,28 @@ private fun DashboardView(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // stats (web renderStats)
+        // stats (web renderStats + .stats breakpoints: 4 cols, 2x2 at <=900px)
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                if (owner) {
-                    StatTile("Plants profiled", plants.size.toString(), modifier = Modifier.weight(1f))
-                    StatTile("Check today", checkToday.toString(), tint = NoirColors.ChampagneHi, modifier = Modifier.weight(1f))
-                    StatTile("Overdue", overdue.toString(), tint = Color(0xFFE8C8B5), modifier = Modifier.weight(1f))
-                    StatTile("Reservoir plants", reservoir.toString(), modifier = Modifier.weight(1f))
-                } else {
-                    StatTile("Plants profiled", plants.size.toString(), modifier = Modifier.weight(1f))
-                    StatTile("Plant groups", plants.mapNotNull { it.group }.distinct().size.toString(), modifier = Modifier.weight(1f))
-                    StatTile("Gallery photos", galleryCount.toString(), modifier = Modifier.weight(1f))
-                    StatTile("Growth photos", growthCount.toString(), modifier = Modifier.weight(1f))
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val gap = if (maxWidth < 620.dp) 8.dp else 14.dp
+                val tiles = if (owner) listOf(
+                    Triple("Plants profiled", plants.size.toString(), NoirColors.Ivory),
+                    Triple("Check today", checkToday.toString(), NoirColors.ChampagneHi),
+                    Triple("Overdue", overdue.toString(), Color(0xFFE8C8B5)),
+                    Triple("Reservoir plants", reservoir.toString(), NoirColors.Ivory),
+                ) else listOf(
+                    Triple("Plants profiled", plants.size.toString(), NoirColors.Ivory),
+                    Triple("Plant groups", plants.mapNotNull { it.group }.distinct().size.toString(), NoirColors.Ivory),
+                    Triple("Gallery photos", galleryCount.toString(), NoirColors.Ivory),
+                    Triple("Growth photos", growthCount.toString(), NoirColors.Ivory),
+                )
+                val rows = if (maxWidth < 900.dp) tiles.chunked(2) else listOf(tiles)
+                Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                    rows.forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(gap), modifier = Modifier.fillMaxWidth()) {
+                            row.forEach { (l, v, t) -> StatTile(l, v, t, Modifier.weight(1f)) }
+                        }
+                    }
                 }
             }
         }
@@ -449,6 +460,7 @@ private fun PlantsView(
     var group by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
     var statusFilter by rememberSaveable { mutableStateOf("") }
+    var gridMode by rememberSaveable { mutableStateOf(false) } // Cards ⇄ Instagram grid
 
     val groups = listOf("") + plants.mapNotNull { it.group }.filter { it.isNotBlank() }.distinct().sorted()
     val locations = listOf("") + plants.mapNotNull { it.location }.filter { it.isNotBlank() }.distinct().sorted()
@@ -477,10 +489,10 @@ private fun PlantsView(
             else -> 1
         }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = if (gridMode) GridCells.Fixed(3) else GridCells.Fixed(columns),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (gridMode) 2.dp else 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (gridMode) 2.dp else 12.dp),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column {
@@ -490,7 +502,7 @@ private fun PlantsView(
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterSelect("All groups", groups.map { if (it.isEmpty()) "All groups" else it }, if (group.isEmpty()) "All groups" else group) {
                             group = if (it == "All groups") "" else it
                         }
@@ -506,6 +518,26 @@ private fun PlantsView(
                                 statusFilter = if (it == "All statuses") "" else it
                             }
                         }
+                        // view switcher: web cards ⇄ Instagram-style square grid
+                        listOf(false to "Cards", true to "Grid").forEach { (mode, label) ->
+                            val active = mode == gridMode
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(
+                                        if (active) Brush.verticalGradient(listOf(NoirColors.Champagne, NoirColors.ChampagneHi))
+                                        else Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom))
+                                    )
+                                    .clickable { gridMode = mode }
+                                    .padding(horizontal = 13.dp, vertical = 7.dp)
+                            ) {
+                                Text(
+                                    label,
+                                    color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
                     }
                     Spacer(Modifier.height(4.dp))
                 }
@@ -513,6 +545,10 @@ private fun PlantsView(
             if (filtered.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyState(if (plants.isEmpty()) "No plants in the collection yet." else "No plants match these filters.")
+                }
+            } else if (gridMode) {
+                items(filtered, key = { it.id }) { plant ->
+                    SquareTile(plant, covers[plant.id]) { onOpenPlant(plant.id) }
                 }
             } else {
                 items(filtered, key = { it.id }) { plant ->

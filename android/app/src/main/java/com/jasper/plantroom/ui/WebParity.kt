@@ -72,16 +72,16 @@ internal fun statusLabel(status: String): String = when (status) {
 fun StatTile(label: String, value: String, tint: Color = NoirColors.Ivory, modifier: Modifier = Modifier) {
     Column(
         modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(18.dp)
     ) {
         Text(
-            label.uppercase(), color = NoirColors.Muted, fontSize = 9.5.sp,
-            letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+            label, color = NoirColors.Muted, fontSize = 13.sp,
+            maxLines = 2, overflow = TextOverflow.Ellipsis
         )
-        Spacer(Modifier.height(4.dp))
-        Text(value, color = tint, fontWeight = FontWeight.SemiBold, fontSize = 26.sp)
+        Spacer(Modifier.height(7.dp))
+        Text(value, color = tint, fontWeight = FontWeight.SemiBold, fontSize = 31.sp)
     }
 }
 
@@ -146,7 +146,10 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () 
                     if (owner) Chip(statusLabel(status))
                 }
                 Spacer(Modifier.height(13.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Chip(plant.group ?: "Plant")
                     plant.pot?.takeIf { it.isNotBlank() }?.let { Chip(it) }
                     plant.wateringMode?.takeIf { it.isNotBlank() }?.let { Chip(it) }
@@ -273,6 +276,30 @@ private fun QuickCareButton(text: String, onClick: () -> Unit) {
             .padding(horizontal = 11.dp, vertical = 5.dp)
     ) {
         Text(text, color = NoirColors.OnChampagne, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** Instagram-style square grid tile (view switcher "Grid" mode). */
+@Composable
+fun SquareTile(plant: Plant, photoUrl: String?, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(4.dp))
+            .background(NoirColors.CardBottom)
+            .clickable(onClick = onClick)
+    ) {
+        if (!photoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = plant.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text("\uD83C\uDF31", fontSize = 26.sp, modifier = Modifier.align(Alignment.Center))
+        }
     }
 }
 
