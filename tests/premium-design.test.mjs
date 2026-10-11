@@ -39,7 +39,7 @@ test('generated botanical artwork wraps headers and background; owner photos sta
 });
 
 test('v51 loads last before boot and its artwork is precached', () => {
-  const script = index.indexOf('v51-noir-premium.js?v=5.1.0');
+  const script = index.indexOf('v51-noir-premium.js?v=5.1.1');
   const v50 = index.indexOf('v50-media-efficiency.js?v=5.0.0');
   const boot = index.indexOf('<script>boot();</script>');
   assert.notEqual(script, -1);

@@ -59,7 +59,7 @@ body::after{
 /* ── typography: Bodoni display × Inter UI ─────────────────────────────── */
 .brand strong,.hero h1,.section-head h2,.modal-head h2,#v429PatchNotesDialog h2,
 .plant-card h3,.location-card h3,.backlog-card h3,.today-card strong,.queue-main strong{
-  font-family:'Bodoni Moda','Georgia',serif;font-weight:500;letter-spacing:0;
+  font-family:'Bodoni Moda','Georgia',serif!important;font-weight:500!important;letter-spacing:0!important;
 }
 .hero h1{font-size:clamp(34px,4.6vw,56px);line-height:1.04;text-shadow:0 2px 24px rgba(0,0,0,.55)}
 .section-head h2,.modal-head h2,#v429PatchNotesDialog h2{letter-spacing:-.005em}
