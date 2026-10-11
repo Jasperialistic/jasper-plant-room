@@ -42,6 +42,15 @@ data class PlantUpdate(
 /** Pure rules shared with the web app — kept side-effect free for JVM tests. */
 object PlantRules {
 
+    private val uuidPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+
+    fun isCanonicalPlantId(value: String): Boolean = uuidPattern.matches(value)
+
+    fun requireCanonicalPlantId(value: String): String {
+        require(isCanonicalPlantId(value)) { "Plant identity is not a valid cloud UUID. Nothing was saved." }
+        return value
+    }
+
     fun deriveNextCheck(action: String, checkDays: Int?, today: String): String? = when {
         action == "Watered" && checkDays != null -> addDays(today, checkDays)
         action == "Checked — still moist" -> addDays(today, 1)
@@ -81,6 +90,7 @@ object PlantWriter {
     /** Web contract: care_log row + plants.last_care/last_action/next_check update. */
     suspend fun addCare(plant: Plant, action: String, details: String, nextCheck: String?) {
         val userId = requireOwner()
+        PlantRules.requireCanonicalPlantId(plant.id)
         val today = java.time.LocalDate.now().toString()
         PlantRepository.client.postgrest["care_log"].insert(
             CareLogInsert(

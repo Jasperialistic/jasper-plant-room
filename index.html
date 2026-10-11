@@ -1654,6 +1654,9 @@ function statusOf(p){if(isReservoir(p))return'reservoir';if(!p.nextCheck)return'
 function statusLabel(p){const s=statusOf(p);return s==='overdue'?'Overdue':s==='today'?'Check today':s==='reservoir'?'Reservoir':'Upcoming';}
 function setCloudStatus(text,offline=false){const el=$('#cloudStatus');if(!el)return;el.textContent=text;el.classList.toggle('offline',offline);}
 function requireOwner(){if(isOwner&&session)return true;openAuth('Owner login is required to edit the collection.');return false;}
+const careAttempts=new Map();
+function cloudStatusIdle(){setCloudStatus(isOwner?'Owner · cloud synced':'Public view');}
+function withCareTimeout(promise,label='Care update',ms=20000){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Check your connection and retry; the same care entry will be reused safely.`)),ms);})]).finally(()=>clearTimeout(timer));}
 
 function rowToPlant(r){return {cloudId:r.id,legacyId:r.legacy_id,id:r.legacy_id,name:r.name,group:r.plant_group,location:r.location,light:r.light,environment:r.environment,pot:r.pot,potType:r.pot_type,outer:r.outer_pot,medium:r.medium,mode:r.watering_mode,lastCare:r.last_care,lastAction:r.last_action,nextCheck:r.next_check,checkDays:r.check_days,rule:r.check_rule,notes:r.notes,confidence:r.confidence};}
 function plantToRow(p,userId){return {user_id:userId,legacy_id:p.id,name:p.name,plant_group:p.group,location:p.location,light:p.light,environment:p.environment,pot:p.pot,pot_type:p.potType,outer_pot:p.outer,medium:p.medium,watering_mode:p.mode,last_care:p.lastCare||null,last_action:p.lastAction||null,next_check:p.nextCheck||null,check_days:p.checkDays||null,check_rule:p.rule||null,notes:p.notes||null,confidence:p.confidence||null};}
@@ -1700,13 +1703,14 @@ async function loadCloud(){
  const zP=sb.from('grow_zones').select('*').order('sort_order',{ascending:true}).order('name');
  const crP=isOwner?sb.from('care_log').select('*').order('care_date',{ascending:false}).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null});
  const [pr,phr,bpr,zr,cr]=await Promise.all([prP,phP,bpP,zP,crP]);
- if(pr.error)throw pr.error;if(phr.error)throw phr.error;if(bpr.error)throw bpr.error;if(zr.error)throw zr.error;if(cr.error)throw cr.error;
+ if(pr.error)throw pr.error;
  db.plants=pr.data.length?pr.data.map(rowToPlant):baseFallbackPlants();
- db.photos=(phr.data||[]).map(x=>({...x,url:publicUrl(x.storage_path)}));
- db.basePhotoMeta=bpr.data||[];
- db.locations=(zr.data&&zr.data.length)?zr.data.map(x=>({id:x.id,name:x.name,details:x.details||'',humidity:x.humidity||'',par:x.par||'',growLights:x.grow_lights||'',notes:x.notes||'',icon:x.icon||'◇',photo:x.photo_asset_path||'',sortOrder:x.sort_order||0})):window.PLANT_DATA.locations||[];
- db.careLog=(cr.data||[]).map(x=>({id:x.id,date:x.care_date,plant:x.plant_name,action:x.action,details:x.details||'',location:x.location||''}));
- renderFilters(true);renderAll();setCloudStatus(isOwner?'Owner · cloud synced':'Public view');
+ if(!phr.error)db.photos=(phr.data||[]).map(x=>({...x,url:publicUrl(x.storage_path)}));
+ if(!bpr.error)db.basePhotoMeta=bpr.data||[];
+ if(!zr.error)db.locations=(zr.data&&zr.data.length)?zr.data.map(x=>({id:x.id,name:x.name,details:x.details||'',humidity:x.humidity||'',par:x.par||'',growLights:x.grow_lights||'',notes:x.notes||'',icon:x.icon||'◇',photo:x.photo_asset_path||'',sortOrder:x.sort_order||0})):window.PLANT_DATA.locations||[];
+ if(!cr.error)db.careLog=(cr.data||[]).map(x=>({id:x.id,date:x.care_date,plant:x.plant_name,action:x.action,details:x.details||'',location:x.location||''}));
+ const partial=[phr.error&&'photos',bpr.error&&'base photos',zr.error&&'zones',cr.error&&'care history'].filter(Boolean);
+ renderFilters(true);renderAll();setCloudStatus(partial.length?`Cloud partly unavailable · ${partial.join(', ')}`:(isOwner?'Owner · cloud synced':'Public view'),partial.length>0);
 }
 
 function setOwnerUI(){
@@ -1729,7 +1733,7 @@ async function boot(){
   setOwnerUI();
   if(isOwner){await seedIfEmpty();await ensureBasePhotoMeta();}
   await loadCloud();
- }catch(e){console.error(e);setCloudStatus('Cloud unavailable',true);db.plants=baseFallbackPlants();db.careLog=[];db.photos=[];renderFilters(true);renderAll();}
+ }catch(e){console.error(e);setCloudStatus('Cloud unavailable · browsing cached collection',true);if(!db.plants.some(p=>window.PlantCareRecovery?.isUuid(p.cloudId)))db.plants=baseFallbackPlants();renderFilters(true);renderAll();}
 }
 
 function openAuth(message=''){const g=$('#authGate');g.classList.remove('hidden');g.setAttribute('aria-hidden','false');$('#authPassword').value='';$('#authMessage').textContent=message||'Sign in once on each device. Your session will be remembered by that browser.';setTimeout(()=>$('#authPassword').focus(),50);}
@@ -1789,15 +1793,56 @@ function openPlant(cloudId,activeTab='gallery'){
  const actions=isOwner?`<div class="quick-actions"><button class="primary" data-quick="moist">Checked — still moist</button><button class="ghost" data-quick="water">Watered today</button>${isReservoir(p)?'<button class="ghost" data-quick="reservoir">Reservoir topped</button>':''}<button class="ghost" data-quick="custom">Add custom entry</button><button class="ghost" id="editPlantBtn">Edit details</button></div>`:'';
  $('#plantDialogBody').innerHTML=`<div class="dialog-inner"><div class="modal-head"><div><span class="eyebrow">${esc(p.group||'PLANT')}${isOwner?' · '+esc(statusLabel(p)):''}</span><h2>${esc(p.name)}</h2></div><button class="icon-btn" id="closePlant">×</button></div><div class="gallery-main-wrap"><img id="mainPhoto" class="gallery-main" src="${photo(p)}" alt="${esc(p.name)}" title="Click to view full screen"><div class="gallery-main-expand">⛶ Full screen</div></div><div id="mainPhotoCaption" class="main-photo-caption"></div><div class="profile-tabs"><button class="profile-tab ${activeTab==='gallery'?'active':''}" data-profile-tab="gallery">Gallery</button><button class="profile-tab ${activeTab==='growth'?'active':''}" data-profile-tab="growth">Growth progress <span class="chip">${cloudPhotos(p,'growth').length}</span></button></div><div class="profile-panel ${activeTab==='gallery'?'active':''}" data-panel="gallery">${galleryHTML(p)}</div><div class="profile-panel ${activeTab==='growth'?'active':''}" data-panel="growth">${growthHTML(p)}</div><div class="detail-grid">${details.map(([a,b])=>`<div class="detail"><span>${a}</span><strong>${esc(b||'—')}</strong></div>`).join('')}</div>${p.rule?`<div class="rule-box"><strong>Care note</strong><br>${esc(p.rule||'')}${p.notes?`<br><span style="color:var(--muted)">${esc(p.notes)}</span>`:''}</div>`:''}${actions}</div>`;
  $('#closePlant').onclick=()=>{closePhotoLightbox();dlg.close();};$$('[data-profile-tab]').forEach(b=>b.onclick=()=>{const tab=b.dataset.profileTab;$$('[data-profile-tab]').forEach(x=>x.classList.toggle('active',x===b));$$('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===tab));});bindPlantPhotoViewer(p);
- if(isOwner){$$('[data-add-photo]').forEach(b=>b.onclick=()=>openPhotoDialog(p,b.dataset.addPhoto));$$('[data-delete-photo]').forEach(b=>b.onclick=()=>deletePhoto(b.dataset.deletePhoto,p.cloudId,activeTab));$$('[data-gallery-thumb]').forEach(b=>b.onclick=()=>setGalleryThumbnail(p.cloudId,b.dataset.galleryThumb));$$('[data-gallery-edit]').forEach(b=>b.onclick=()=>openGalleryEdit(p,b.dataset.galleryEdit));$$('[data-gallery-move]').forEach(b=>b.onclick=()=>moveGalleryItem(p.cloudId,b.dataset.galleryKey,Number(b.dataset.galleryMove)));$$('[data-gallery-delete]').forEach(b=>b.onclick=()=>deleteGalleryItem(p.cloudId,b.dataset.galleryDelete));$$('[data-gallery-restore]').forEach(b=>b.onclick=()=>restoreGalleryItem(p.cloudId,b.dataset.galleryRestore));$$('[data-quick]').forEach(b=>b.onclick=()=>quickAction(p,b.dataset.quick));const eb=$('#editPlantBtn');if(eb)eb.onclick=()=>openEditDialog(p);}
+ if(isOwner){$$('[data-add-photo]').forEach(b=>b.onclick=()=>openPhotoDialog(p,b.dataset.addPhoto));$$('[data-delete-photo]').forEach(b=>b.onclick=()=>deletePhoto(b.dataset.deletePhoto,p.cloudId,activeTab));$$('[data-gallery-thumb]').forEach(b=>b.onclick=()=>setGalleryThumbnail(p.cloudId,b.dataset.galleryThumb));$$('[data-gallery-edit]').forEach(b=>b.onclick=()=>openGalleryEdit(p,b.dataset.galleryEdit));$$('[data-gallery-move]').forEach(b=>b.onclick=()=>moveGalleryItem(p.cloudId,b.dataset.galleryKey,Number(b.dataset.galleryMove)));$$('[data-gallery-delete]').forEach(b=>b.onclick=()=>deleteGalleryItem(p.cloudId,b.dataset.galleryDelete));$$('[data-gallery-restore]').forEach(b=>b.onclick=()=>restoreGalleryItem(p.cloudId,b.dataset.galleryRestore));$$('[data-quick]').forEach(b=>b.onclick=()=>quickAction(p,b.dataset.quick,b));const eb=$('#editPlantBtn');if(eb)eb.onclick=()=>openEditDialog(p);}
  dlg.showModal();
 }
 
-async function addCare(p,action,details='',next=null){if(!requireOwner())return;setCloudStatus('Saving…');const today=isoToday();const ins=await sb.from('care_log').insert({user_id:session.user.id,plant_id:p.cloudId,care_date:today,plant_name:p.name,action,details,location:p.location});if(ins.error)throw ins.error;const upd=await sb.from('plants').update({last_care:today,last_action:action,next_check:next||null}).eq('id',p.cloudId);if(upd.error)throw upd.error;await loadCloud();}
-async function quickAction(p,type){if(!requireOwner())return;try{if(type==='custom'){$('#plantDialog').close();openLogDialog(p.cloudId);return;}const today=isoToday();let action,next=null;if(type==='moist'){action='Checked — still moist';next=addDays(today,1);}if(type==='water'){action='Watered';next=p.checkDays?addDays(today,p.checkDays):null;}if(type==='reservoir'){action='Reservoir topped up';next=null;}$('#plantDialog').close();await addCare(p,action,'',next);}catch(e){alert(e.message);setCloudStatus('Sync error',true);}}
+async function resolveWritablePlant(p){
+ const local=window.PlantCareRecovery.canonicalFromList(p,db.plants);if(local)return local;
+ const legacy=window.PlantCareRecovery.legacyIdOf(p);if(!legacy)throw new Error('This plant has no canonical cloud identity. Nothing was saved.');
+ const lookup=await withCareTimeout(sb.from('plants').select('*').eq('legacy_id',legacy).limit(2),'Plant identity lookup');
+ if(lookup.error)throw new Error(`Could not resolve this plant in the cloud: ${lookup.error.message||lookup.error}`);
+ const rows=(lookup.data||[]).map(rowToPlant),canonical=window.PlantCareRecovery.canonicalFromList(p,rows);
+ if(!canonical)throw new Error(`No cloud plant matches ${legacy}. Refresh the collection before logging care.`);
+ return canonical;
+}
+async function addCare(p,action,details='',next=null){
+ if(!requireOwner())return;
+ const plant=await resolveWritablePlant(p),plantId=String(plant.cloudId||plant.id||'');
+ if(!window.PlantCareRecovery.isUuid(plantId))throw new Error('Plant identity is not a valid cloud UUID. Nothing was saved.');
+ const today=isoToday(),fingerprint=window.PlantCareRecovery.careFingerprint({plantId,date:today,action,details,nextCheck:next});
+ let attempt=careAttempts.get(fingerprint);if(attempt?.promise)return attempt.promise;
+ if(!attempt){attempt={id:crypto.randomUUID(),promise:null};careAttempts.set(fingerprint,attempt);}
+ attempt.promise=(async()=>{
+  setCloudStatus('Saving…');
+  const payload={id:attempt.id,user_id:session.user.id,plant_id:plantId,care_date:today,plant_name:plant.name,action,details,location:plant.location};
+  const ins=await withCareTimeout(sb.from('care_log').insert(payload),'Care log save');
+  if(ins.error){
+   if(!window.PlantCareRecovery.isDuplicateError(ins.error))throw ins.error;
+   const existing=await withCareTimeout(sb.from('care_log').select('id').eq('id',attempt.id).eq('user_id',session.user.id).maybeSingle(),'Care retry check');
+   if(existing.error||!existing.data)throw ins.error;
+  }
+  const upd=await withCareTimeout(sb.from('plants').update({last_care:today,last_action:action,next_check:next||null}).eq('id',plantId),'Plant schedule update');
+  if(upd.error)throw upd.error;
+  await withCareTimeout(loadCloud(),'Collection refresh');
+  careAttempts.delete(fingerprint);
+ })();
+ try{return await attempt.promise;}finally{attempt.promise=null;if($('#cloudStatus')?.textContent==='Saving…')cloudStatusIdle();}
+}
+async function quickAction(p,type,button){
+ if(!requireOwner())return;
+ if(type==='custom'){$('#plantDialog').close();openLogDialog(p.cloudId);return;}
+ const buttons=$$('#plantDialog [data-quick]'),labels=buttons.map(item=>item.textContent),today=isoToday();let action,next=null;
+ if(type==='moist'){action='Checked — still moist';next=addDays(today,1);}if(type==='water'){action='Watered';next=p.checkDays?addDays(today,p.checkDays):null;}if(type==='reservoir'){action='Reservoir topped up';next=null;}
+ if(!action)return;
+ buttons.forEach(item=>item.disabled=true);if(button)button.textContent='Saving…';
+ try{await addCare(p,action,'',next);$('#plantDialog').close();}
+ catch(e){console.error(e);alert(e.message||String(e));setCloudStatus('Care not saved · retry available',true);}
+ finally{buttons.forEach((item,index)=>{if(item.isConnected){item.disabled=false;item.textContent=labels[index];}});}
+}
 function populateLogPlants(){const s=$('#logPlant'),cur=s.value;s.innerHTML=db.plants.filter(p=>!String(p.cloudId).startsWith('base:')).map(p=>`<option value="${p.cloudId}">${esc(p.name)}</option>`).join('');if(cur)s.value=cur;}
 function openLogDialog(id=''){if(!requireOwner())return;populateLogPlants();if(id)$('#logPlant').value=id;$('#logDetails').value='';$('#logNextCheck').value='';$('#logDialog').showModal();}
-async function saveCustomLog(){if(!requireOwner())return;const p=db.plants.find(x=>String(x.cloudId)===$('#logPlant').value);if(!p)return;const a=$('#logAction').value,d=$('#logDetails').value,t=isoToday();let n=$('#logNextCheck').value||null;if(!n&&a==='Watered'&&p.checkDays)n=addDays(t,p.checkDays);else if(!n&&a==='Checked — still moist')n=addDays(t,1);try{await addCare(p,a,d,n);$('#logDialog').close();}catch(e){alert(e.message);}}
+async function saveCustomLog(){if(!requireOwner())return;const p=db.plants.find(x=>String(x.cloudId)===$('#logPlant').value);if(!p)return;const a=$('#logAction').value,d=$('#logDetails').value,t=isoToday(),btn=$('#saveLogBtn'),label=btn.textContent;let n=$('#logNextCheck').value||null;if(!n&&a==='Watered'&&p.checkDays)n=addDays(t,p.checkDays);else if(!n&&a==='Checked — still moist')n=addDays(t,1);btn.disabled=true;btn.textContent='Saving…';try{await addCare(p,a,d,n);$('#logDialog').close();}catch(e){console.error(e);alert(e.message||String(e));setCloudStatus('Care not saved · retry available',true);}finally{btn.disabled=false;btn.textContent=label;}}
 function openPhotoDialog(p,kind){if(!requireOwner())return;$('#photoPlantId').value=p.cloudId;$('#photoKind').value=kind;$('#photoDialogTitle').textContent=kind==='growth'?'Add growth progress photo':'Add gallery photo';$('#photoFile').value='';$('#photoDate').value=isoToday();$('#photoNote').value='';$('#uploadMessage').textContent=kind==='growth'?'This will appear chronologically in Growth Progress on every device.':'This will be added to the public plant gallery.';$('#photoDialog').showModal();}
 function safeName(s){return s.replace(/[^a-zA-Z0-9._-]+/g,'-').slice(-100);}
 async function uploadPhoto(){if(!requireOwner())return;const file=$('#photoFile').files[0],plantId=$('#photoPlantId').value,kind=$('#photoKind').value,date=$('#photoDate').value||isoToday(),note=$('#photoNote').value.trim();if(!file){$('#uploadMessage').textContent='Choose a photo first.';return;}const btn=$('#uploadPhotoBtn');btn.disabled=true;$('#uploadMessage').textContent='Uploading…';try{const p=db.plants.find(x=>String(x.cloudId)===String(plantId));const sortOrder=kind==='gallery'&&p?nextGalleryOrder(p):0;const path=`${session.user.id}/${plantId}/${kind}/${crypto.randomUUID()}-${safeName(file.name)}`;const up=await sb.storage.from('plant-media').upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;const meta=await sb.from('plant_photos').insert({user_id:session.user.id,plant_id:plantId,kind,storage_path:path,photo_date:date,note,sort_order:sortOrder});if(meta.error)throw meta.error;$('#photoDialog').close();await loadCloud();openPlant(plantId,kind);}catch(e){console.error(e);$('#uploadMessage').textContent=e.message;}finally{btn.disabled=false;}}
@@ -1855,6 +1900,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v49-organic-experience.js?v=4.43.0"></script>
   <script src="v50-media-efficiency.js?v=5.0.0"></script>
   <script src="v51-noir-premium.js?v=5.1.4"></script>
+  <script src="v52-care-recovery.js?v=5.2.1"></script>
   <script>boot();</script>
 </body>
 </html>

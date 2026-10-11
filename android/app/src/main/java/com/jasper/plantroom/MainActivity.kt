@@ -130,8 +130,8 @@ fun PlantRoomApp() {
     var openPlantId by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    fun load() {
-        state = ScreenState.Loading
+    fun load(silent: Boolean = false) {
+        if (!silent) state = ScreenState.Loading
         scope.launch {
             state = try {
                 val plants = PlantRepository.loadPlants()
@@ -182,7 +182,7 @@ fun PlantRoomApp() {
             owner = current.owner,
             onOpenPlant = { openPlantId = it },
             onOwnerSignIn = { state = ScreenState.SignIn },
-            onRefresh = { load() },
+            onRefresh = { load(silent = true) },
         )
         is ScreenState.Failed -> FailureScreen(message = current.message, onRetry = { load() })
     }
@@ -242,12 +242,14 @@ private fun ShellScreen(
     var speciesFilter by rememberSaveable { mutableStateOf("") }
     var growthPlant by remember { mutableStateOf<Plant?>(null) }
     var carePlant by remember { mutableStateOf<Plant?>(null) }
+    var careInFlight by remember { mutableStateOf(emptySet<String>()) }
     val scope = rememberCoroutineScope()
     val appCtx = androidx.compose.ui.platform.LocalContext.current
 
     // web addCare(): care_log insert + plants update, then refresh
     val quickCare: (Plant, String, String?) -> Unit = { plant, action, next ->
-        scope.launch {
+        if (plant.id !in careInFlight) scope.launch {
+            careInFlight = careInFlight + plant.id
             val result = runCatching { PlantRepository.logCare(plant, action, "", next) }
             if (result.isSuccess) {
                 android.util.Log.d("QuickCare", "logged '$action' for ${plant.name} next=$next")
@@ -256,7 +258,8 @@ private fun ShellScreen(
                 android.util.Log.e("QuickCare", "logCare failed for ${plant.name}", result.exceptionOrNull())
                 android.widget.Toast.makeText(appCtx, "Care log failed: ${result.exceptionOrNull()?.message ?: "unknown"}", android.widget.Toast.LENGTH_LONG).show()
             }
-            onRefresh()
+            careInFlight = careInFlight - plant.id
+            if (result.isSuccess) onRefresh()
         }
     }
 
@@ -351,12 +354,12 @@ private fun ShellScreen(
         }
 
         when (current) {
-            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, onSpecies = { speciesFilter = it; tab = Tab.Plants.name }, onCustomCare = { carePlant = it }, modifier = Modifier.weight(1f))
+            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, careInFlight, onSpecies = { speciesFilter = it; tab = Tab.Plants.name }, onCustomCare = { carePlant = it }, modifier = Modifier.weight(1f))
             Tab.Plants -> PlantsView(plants, covers, owner, speciesFilter, { speciesFilter = "" }, onOpenPlant, Modifier.weight(1f))
             Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
             Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
             Tab.Profile -> ProfileView(Modifier.weight(1f))
-            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, onSpecies = { speciesFilter = it; tab = Tab.Plants.name }, onCustomCare = { carePlant = it }, modifier = Modifier.weight(1f))
+            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, careInFlight, onSpecies = { speciesFilter = it; tab = Tab.Plants.name }, onCustomCare = { carePlant = it }, modifier = Modifier.weight(1f))
         }
 
             // web #mobileAppNav: bottom app bar
@@ -431,6 +434,7 @@ private fun DashboardView(
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
     onQuickCare: (Plant, String, String?) -> Unit = { _, _, _ -> },
+    careInFlight: Set<String> = emptySet(),
     onSpecies: (String) -> Unit = {},
     onCustomCare: (Plant) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -502,6 +506,7 @@ private fun DashboardView(
         items(queue, key = { "q-${it.id}" }) { plant ->
             QueueRow(
                 plant, covers[plant.id], owner,
+                careBusy = plant.id in careInFlight,
                 onMoist = { onQuickCare(plant, "Checked — still moist", moistNext()) },
                 onWatered = { onQuickCare(plant, "Watered", wateredNext(plant)) },
                 onReservoir = { onQuickCare(plant, "Reservoir topped up", null) },

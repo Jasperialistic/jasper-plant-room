@@ -52,7 +52,7 @@ test('mobile adjacent viewer slides use thumbnails while the current image remai
 });
 
 test('service worker and page use the same cache-busted media patch', () => {
-  assert.match(worker, /jasper-plant-room-shell-v5\.2\.0/);
+  assert.match(worker, /jasper-plant-room-shell-v5\.2\.1/);
   assert.match(worker, /v47-mobile-navigation\.js\?v=4\.43\.3/);
   assert.match(worker, /v48-upload-queue\.js\?v=4\.43\.1/);
   assert.match(worker, /v48-kemuri\.js\?v=4\.43\.0/);

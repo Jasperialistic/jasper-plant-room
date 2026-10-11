@@ -149,10 +149,12 @@ object PlantRepository {
      */
     suspend fun logCare(plant: Plant, action: String, details: String = "", nextCheck: String?) {
         val userId = client.auth.currentUserOrNull()?.id ?: error("Not signed in")
+        PlantRules.requireCanonicalPlantId(plant.id)
         val today = java.time.LocalDate.now().toString()
         val jp = { s: String -> kotlinx.serialization.json.JsonPrimitive(s) }
         client.postgrest["care_log"].insert(
             kotlinx.serialization.json.buildJsonObject {
+                put("id", jp(java.util.UUID.randomUUID().toString()))
                 put("user_id", jp(userId))
                 put("plant_id", jp(plant.id))
                 put("care_date", jp(today))
