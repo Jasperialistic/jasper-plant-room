@@ -60,22 +60,23 @@ Honest claims:
   entries after one visit; cache-first path serves repeat visits with zero
   network egress for already-seen photos.
 - Same-origin shell: all 28 scripts served from SW cache on repeat visits.
-- **CDN/HTTP cache defect found:** every sampled `plant-media` object — legacy
-  `base-*`, recent `photo-*`, and `.thumb.jpg` derivatives uploaded with
-  `cacheControl:'31536000'` — serves `Cache-Control: no-cache` with
-  `CF-Cache-Status: MISS`. HTTP/CDN caching of photos is therefore ineffective
-  bucket-wide; repeat-visit savings currently come ONLY from the SW cache.
+- **CORRECTION (same day, follow-up probes):** an earlier reading claimed a
+  bucket-wide `Cache-Control: no-cache` / `CF-Cache-Status: MISS` defect. That
+  was a probe-method artifact — the readings came from `HEAD` requests, whose
+  Supabase/Cloudflare path reports `no-cache` + `REVALIDATED` semantics
+  regardless of object policy. On `GET` (the application's actual traffic):
+  - `Cache-Control: public, max-age=31536000`
+  - `CF-Cache-Status: HIT` on repeat GETs (including across probe sessions)
+  - `If-None-Match` conditional GET → `304 Not Modified`
+  - recent `.thumb.jpg` derivatives (uploaded with `cacheControl:'31536000'`
+    via `uploadThumbnail`) carry the same long-lived policy on GET.
 
-### Cache-control remediation (prepared, NOT executed — owner gate)
-
-Changing object cache-control metadata is a production storage mutation and is
-owner-gated per the graph's rules. Options when approved:
-1. Re-upload/copy-in-place with `cacheControl:'31536000'` for all `plant-media`
-   derivatives (bytes unchanged; needs authenticated owner session), or
-2. Raise with Supabase whether the platform overrides object cache-control on
-   public object delivery (the upload setting appears ineffective).
-The queue (v48/v50) continues to set `cacheControl:'31536000'` on every new
-upload, so new objects are covered the moment delivery honors it.
+**Conclusion: there is no cache-control defect.** Uploads' cache headers are
+honored end-to-end (CDN HIT + 1-year browser max-age + ETag revalidation), and
+the SW photo cache adds repeat-visit/offline protection on top. No production
+metadata remediation is required or proposed. Final confirmation for brand-new
+uploads will come from the owner-authenticated upload test (same upload path
+and options as the verified derivatives).
 
 ## 5. Known limitations
 
