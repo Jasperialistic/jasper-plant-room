@@ -1,0 +1,6 @@
+## Plant Room Android — machine-local and build outputs (never committed)
+local.properties
+.gradle/
+build/
+*.iml
+.idea/
