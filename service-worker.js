@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v4.43.0 — organic KEMURI experience */
-const CACHE_NAME='jasper-plant-room-shell-v4.43.0';
+/* Jasper's Plant Room v5.2.0 — Noir Edition shell */
+const CACHE_NAME='jasper-plant-room-shell-v5.2.0';
 const PHOTO_CACHE_NAME='jasper-plant-room-photos-v1';
 const PLANT_MEDIA_ORIGIN='https://vslyrabiqgbgbcqgooxb.supabase.co';
 const SHELL=[
@@ -30,7 +30,7 @@ const SHELL=[
   './v44-add-plant-presets-light.js?v=4.4.1',
   './v45-location-light-link.js?v=4.5.2',
   './v46-pwa-shell.js?v=4.15.0',
-  './v47-mobile-navigation.js?v=4.43.2',
+  './v47-mobile-navigation.js?v=4.43.3',
   './v48-upload-queue.js?v=4.43.1',
   './v48-kemuri.js?v=4.43.0',
   './v49-organic-experience.js?v=4.43.0',
