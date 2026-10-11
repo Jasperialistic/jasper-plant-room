@@ -309,42 +309,6 @@ private fun ShellScreen(
         }
         }
 
-        // ── tabs (web .tabs) ─────────────────────────────────────────────
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Tab.entries.filter {
-                when (it) {
-                    Tab.AddPlant, Tab.CareLog -> owner
-                    else -> true
-                }
-            }.forEach { t ->
-                val active = t == current
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(
-                            if (active) Brush.verticalGradient(listOf(NoirColors.Champagne, NoirColors.ChampagneHi))
-                            else Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom))
-                        )
-                        .clickable {
-                            if (t == Tab.AddPlant) showAddPlant = true else tab = t.name
-                        }
-                        .padding(horizontal = 15.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        t.label,
-                        color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
-                        fontSize = 12.5.sp
-                    )
-                }
-            }
-        }
-
         when (current) {
             Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, Modifier.weight(1f))
             Tab.Plants -> PlantsView(plants, covers, owner, onOpenPlant, Modifier.weight(1f))
