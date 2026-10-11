@@ -57,16 +57,19 @@ Every interactive/raised surface is built physically, never flat:
 
 - **Owner photography is CONTENT only** (specimen cards, galleries, profiles) —
   never used as background or decorative imagery.
-- **Headers and backgrounds use GENERATED botanical artwork**: faint translucent
-  leaf silhouettes and line-art in the champagne/espresso/emerald palette.
-  Wallpaper-clean, elegant, explicitly **not photorealistic**. Motif family:
-  **Anthurium hearts (crystallinum / warocqueanum) with prominent venation**,
-  Monstera split-leaves, Alocasia arrowheads. Vector SVG assets
-  (`img/art/header-garden.svg`, `banner-frond.svg`, `wallpaper-leaves.svg`).
-- **Composition is symmetric and structural — never scattered wallpaper.**
-  Motifs are arranged as mirrored left/right clusters, balanced pairs and edge
-  frames that echo the UI grid, with clean centers for content. No random
-  floral-repeat pattern ("grandmother wallpaper") anywhere.
+- **Headers and backgrounds use GENERATED botanical artwork**, explicitly
+  **not photorealistic** and never the owner's photos.
+- **One hero leaf per surface — museum treatment, never scattered wallpaper.**
+  A single huge **Anthurium crystallinum** blade anchors each background/header,
+  drawn with full venation anatomy: bold midrib, arcing primary laterals, the
+  signature submarginal **collective vein**, and a fine tertiary reticulum.
+- **Multi-tone outlines that blend with the moodboard**: champagne-hi midrib
+  (`#E7D6B4`), warm-gold primaries (`#C9B18A`), silver-green collective vein
+  (`#A8C0AE`), ivory tertiary web (`#F4F1EC`) — each at low opacity over noir.
+  No monochrome clip-art, no random floral repeats, nothing cheap.
+- Vector SVG assets (`img/art/header-garden.svg`, `banner-frond.svg`,
+  `wallpaper-leaves.svg`); the leaf is cropped editorially per surface
+  (full-bleed behind the page, anchored right on mastheads).
 - **Headers are image-wrapped, never bare text on flat color.** Page mastheads
   and major section headers layer the generated botanical art with dark gradient
   veils (top-dark → bottom-near-black) plus a warm champagne radial light; serif
