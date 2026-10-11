@@ -33,7 +33,8 @@ const SHELL=[
   './v47-mobile-navigation.js?v=4.43.0',
   './v48-upload-queue.js?v=4.43.0',
   './v48-kemuri.js?v=4.43.0',
-  './v49-organic-experience.js?v=4.43.0'
+  './v49-organic-experience.js?v=4.43.0',
+  './v50-media-efficiency.js?v=5.0.0'
 ];
 
 self.addEventListener('install',event=>{
