@@ -2,7 +2,8 @@
 
 Status: owner-selected (11 Oct 2026). Derived from moodboard review:
 Direction E (Apple-style tactile components) × Direction F (fashion-noir palette),
-with owner typography guidance: **sans-first, minimal serif/italic, premium and readable**.
+with owner typography guidance: **premium serif/sans mix — elegant display serif,
+clean sans UI, no cursive/script, highly readable**.
 
 This document is the single source of truth for the premium revamp (Graph D/E/F/G).
 Implementation must follow these tokens; do not invent competing palettes.
@@ -23,13 +24,17 @@ Implementation must follow these tokens; do not invent competing palettes.
 
 Warm-noir family. No purple/blue gradients, no neon, no cold greys.
 
-## Typography (sans-first)
+## Typography (premium serif/sans mix)
 
-- Family: `Inter` (UI + display), system sans fallback. Scientific names are
-  **upright sans** (Inter Medium, slight positive tracking), NOT italic serif.
-- Display: Inter 800, tight tracking (-0.03em), sentence case.
-- Labels/metadata: uppercase, 0.16–0.24em tracking, 700 weight, muted/champagne.
-- No decorative cursive/italic display type anywhere in core product surfaces.
+- Display serif: `Bodoni Moda` (upright only — never cursive/italic script) for
+  page titles, hero headlines and plant names. High-contrast fashion-house
+  character; weights 400–500, tight leading, normal tracking.
+- Interface sans: `Inter` for buttons, forms, navigation, body copy, metadata.
+- Scientific/cultivar names render as **letterspaced uppercase Inter labels**
+  (0.18–0.22em tracking, 600 weight, champagne) beneath the serif display name.
+- Labels/metadata: uppercase Inter, 0.16–0.24em tracking, 700 weight, muted/champagne.
+- This pairing is the identity: do not collapse it to a single family (an all-sans
+  look reads generic/"vibe-coded"), and do not reintroduce italic script.
 - Contrast: ivory `#F4F1EC` on noir `#080808` (AAA); muted `#9A948A` for secondary
   only at ≥13px.
 
