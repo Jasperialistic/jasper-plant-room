@@ -64,6 +64,8 @@ import com.jasper.plantroom.net.PlantRepository
 import com.jasper.plantroom.ui.CareLogRow
 import com.jasper.plantroom.ui.Chip
 import com.jasper.plantroom.ui.EmptyState
+import com.jasper.plantroom.ui.PhotoSlide
+import com.jasper.plantroom.ui.PhotoViewer
 import com.jasper.plantroom.ui.PlantPhotoCard
 import com.jasper.plantroom.ui.PlantRules
 import com.jasper.plantroom.ui.QueueRow
@@ -461,6 +463,8 @@ private fun PlantsView(
     var location by rememberSaveable { mutableStateOf("") }
     var statusFilter by rememberSaveable { mutableStateOf("") }
     var gridMode by rememberSaveable { mutableStateOf(false) } // Cards ⇄ Instagram grid
+    var viewer by remember { mutableStateOf<Pair<List<PhotoSlide>, Int>?>(null) }
+    viewer?.let { (slides, start) -> PhotoViewer(slides, start) { viewer = null } }
 
     val groups = listOf("") + plants.mapNotNull { it.group }.filter { it.isNotBlank() }.distinct().sorted()
     val locations = listOf("") + plants.mapNotNull { it.location }.filter { it.isNotBlank() }.distinct().sorted()
@@ -548,7 +552,13 @@ private fun PlantsView(
                 }
             } else if (gridMode) {
                 items(filtered, key = { it.id }) { plant ->
-                    SquareTile(plant, covers[plant.id]) { onOpenPlant(plant.id) }
+                    SquareTile(plant, covers[plant.id]) {
+                        val slides = filtered.mapNotNull { p ->
+                            covers[p.id]?.let { PhotoSlide(it, listOfNotNull(p.name, p.location).joinToString(" · ")) }
+                        }
+                        val idx = slides.indexOfFirst { it.url == covers[plant.id] }.coerceAtLeast(0)
+                        viewer = slides to idx
+                    }
                 }
             } else {
                 items(filtered, key = { it.id }) { plant ->

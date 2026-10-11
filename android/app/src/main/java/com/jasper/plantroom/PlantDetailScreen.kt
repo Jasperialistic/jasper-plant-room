@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,6 +56,10 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
     var showEdit by remember { mutableStateOf(false) }
     var showCare by remember { mutableStateOf(false) }
     var refreshTick by remember { mutableStateOf(0) }
+    var viewer by remember { mutableStateOf<Pair<List<com.jasper.plantroom.ui.PhotoSlide>, Int>?>(null) }
+    viewer?.let { (slides, start) ->
+        com.jasper.plantroom.ui.PhotoViewer(slides, start, title = plant.name) { viewer = null }
+    }
 
     LaunchedEffect(plant.id, refreshTick) {
         state = try {
@@ -143,6 +148,33 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                 val baseGallery = base.filter { it.hidden != true && it.purged != true }
                     .sortedWith(compareBy({ it.sortOrder ?: 0 }, { it.assetPath ?: "" }))
 
+                // web openPhotoLightbox: ONE deck = all of the plant's photos
+                // (bundled collection + gallery + growth), swipeable from any tap.
+                val allSlides = (
+                    baseGallery.mapNotNull { p ->
+                        p.assetPath?.let { a ->
+                            com.jasper.plantroom.ui.PhotoSlide(
+                                PlantRepository.webAssetUrl(a),
+                                listOfNotNull(p.photoDate?.let { com.jasper.plantroom.ui.PlantRules.prettyDate(it) }, "Collection photo").joinToString(" · "),
+                            )
+                        }
+                    } + gallery.mapNotNull { p ->
+                        PlantRepository.displayUrl(p)?.let { u ->
+                            com.jasper.plantroom.ui.PhotoSlide(
+                                u,
+                                listOfNotNull(p.photoDate?.let { com.jasper.plantroom.ui.PlantRules.prettyDate(it) }, p.note?.takeIf { it.isNotBlank() }).joinToString(" · "),
+                            )
+                        }
+                    } + timeline.mapNotNull { p ->
+                        PlantRepository.displayUrl(p)?.let { u ->
+                            com.jasper.plantroom.ui.PhotoSlide(
+                                u,
+                                listOfNotNull(p.photoDate?.let { com.jasper.plantroom.ui.PlantRules.prettyDate(it) }, p.note?.takeIf { it.isNotBlank() }).joinToString(" · "),
+                            )
+                        }
+                    }
+                )
+
                 item {
                     if (wide) {
                         // two-page spread: photo card left, identity + details right
@@ -152,7 +184,8 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                                     model = cover,
                                     contentDescription = plant.name,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.width(440.dp).height(320.dp).clip(RoundedCornerShape(18.dp)),
+                                    modifier = Modifier.width(440.dp).height(320.dp).clip(RoundedCornerShape(18.dp))
+                                        .clickable { viewer = allSlides to allSlides.indexOfFirst { it.url == cover }.coerceAtLeast(0) },
                                 )
                             } else {
                                 Box(Modifier.width(440.dp).height(320.dp).clip(RoundedCornerShape(18.dp)).background(NoirColors.CardBottom), contentAlignment = Alignment.Center) {
@@ -185,7 +218,8 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                             model = cover,
                             contentDescription = plant.name,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f),
+                            modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f)
+                                .clickable { viewer = allSlides to allSlides.indexOfFirst { it.url == cover }.coerceAtLeast(0) },
                         )
                     } else {
                         Box(Modifier.fillMaxWidth().height(200.dp).background(NoirColors.CardBottom), contentAlignment = Alignment.Center) {
@@ -230,10 +264,14 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                     }
                 } else {
                     items(timeline, key = { "growth:${it.id}" }) { photo ->
+                        val slideUrl = PlantRepository.displayUrl(photo)
                         PhotoRow(
-                            url = PlantRepository.displayUrl(photo),
+                            url = slideUrl,
                             date = photo.photoDate,
                             note = photo.note,
+                            onClick = {
+                                viewer = allSlides to allSlides.indexOfFirst { it.url == slideUrl }.coerceAtLeast(0)
+                            },
                         )
                     }
                 }
@@ -252,17 +290,25 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                     }
                 } else {
                     items(baseGallery, key = { "base:${it.id}" }) { photo ->
+                        val slideUrl = photo.assetPath?.let { PlantRepository.webAssetUrl(it) }
                         PhotoRow(
-                            url = photo.assetPath?.let { PlantRepository.webAssetUrl(it) },
+                            url = slideUrl,
                             date = photo.photoDate,
                             note = "Bundled collection photo",
+                            onClick = {
+                                viewer = allSlides to allSlides.indexOfFirst { it.url == slideUrl }.coerceAtLeast(0)
+                            },
                         )
                     }
                     items(gallery, key = { "gallery:${it.id}" }) { photo ->
+                        val slideUrl = PlantRepository.displayUrl(photo)
                         PhotoRow(
-                            url = PlantRepository.displayUrl(photo),
+                            url = slideUrl,
                             date = photo.photoDate,
                             note = photo.note,
+                            onClick = {
+                                viewer = allSlides to allSlides.indexOfFirst { it.url == slideUrl }.coerceAtLeast(0)
+                            },
                         )
                     }
                 }
@@ -292,12 +338,15 @@ private fun DetailRow(label: String, value: String?) {
 }
 
 @Composable
-private fun PhotoRow(url: String?, date: String?, note: String?) {
+private fun PhotoRow(url: String?, date: String?, note: String?, onClick: () -> Unit = {}) {
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = NoirColors.CardTop),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 5.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 5.dp)
+            .clickable(onClick = onClick),
     ) {
         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             if (url != null) {
@@ -311,7 +360,10 @@ private fun PhotoRow(url: String?, date: String?, note: String?) {
                 Spacer(Modifier.width(14.dp))
             }
             Column {
-                Text(date ?: "Undated", style = MaterialTheme.typography.titleMedium, color = NoirColors.Ivory)
+                Text(
+                    if (date.isNullOrBlank()) "Undated" else com.jasper.plantroom.ui.PlantRules.prettyDate(date),
+                    style = MaterialTheme.typography.titleMedium, color = NoirColors.Ivory,
+                )
                 if (!note.isNullOrBlank()) {
                     Text(note, style = MaterialTheme.typography.bodyMedium, color = NoirColors.Muted)
                 }
