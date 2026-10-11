@@ -133,8 +133,51 @@ object PlantRepository {
 
     suspend fun signOut() = client.auth.signOut()
 
+    /** Persisted UI preferences (survive tab switches and app restarts). */
+    private fun prefs() = appContext.getSharedPreferences("plantroom_prefs", android.content.Context.MODE_PRIVATE)
+    fun getGridMode(): Boolean = runCatching { prefs().getBoolean("plants_grid_mode", false) }.getOrDefault(false)
+    fun setGridMode(enabled: Boolean) {
+        runCatching { prefs().edit().putBoolean("plants_grid_mode", enabled).apply() }
+    }
+
+    /**
+     * Quick care from the dashboard, mirrored VERBATIM from the web addCare()
+     * (index.html:1797) + saveCustomLog() date rules (index.html:1801):
+     * care_log insert {user_id, plant_id, care_date, plant_name, action, details,
+     * location}; plants update {last_care, last_action, next_check}. "Watered"
+     * schedules next_check = today + checkDays; "Checked — still moist" = +1 day.
+     */
+    suspend fun logCare(plant: Plant, action: String, details: String = "", nextCheck: String?) {
+        val userId = client.auth.currentUserOrNull()?.id ?: error("Not signed in")
+        val today = java.time.LocalDate.now().toString()
+        val jp = { s: String -> kotlinx.serialization.json.JsonPrimitive(s) }
+        client.postgrest["care_log"].insert(
+            kotlinx.serialization.json.buildJsonObject {
+                put("user_id", jp(userId))
+                put("plant_id", jp(plant.id))
+                put("care_date", jp(today))
+                put("plant_name", jp(plant.name))
+                put("action", jp(action))
+                put("details", jp(details))
+                put(
+                    "location",
+                    plant.location?.let { jp(it) } ?: kotlinx.serialization.json.JsonNull
+                )
+            }
+        )
+        client.postgrest["plants"].update(
+            kotlinx.serialization.json.buildJsonObject {
+                put("last_care", jp(today))
+                put("last_action", jp(action))
+                if (nextCheck != null) put("next_check", jp(nextCheck)) else put("next_check", kotlinx.serialization.json.JsonNull)
+            }
+        ) {
+            filter { eq("id", plant.id) }
+        }
+    }
+
     suspend fun loadPlants(): List<Plant> =
-        client.postgrest["plants"].select().decodeList<Plant>()
+        client.postgrest["plants"].select { order("name", Order.ASCENDING) }.decodeList<Plant>()
 
     suspend fun loadGrowZones(): List<GrowZone> =
         client.postgrest["grow_zones"]
@@ -188,12 +231,29 @@ object PlantRepository {
     /** Cover selection mirrors web: flagged thumbnail, else first gallery row,
      *  falling back to bundled base photos when a plant has no cloud gallery. */
     fun coverUrl(photos: List<PlantPhoto>, basePhotos: List<PlantBasePhoto> = emptyList()): String? {
-        val gallery = galleryPhotos(photos)
-        val chosen = gallery.firstOrNull { it.isThumbnail == true } ?: gallery.firstOrNull()
-        if (chosen != null) return displayUrl(chosen)
+        // web photo() (index.html:1668): merged gallery order — base first by
+        // default effective_order (i*10) then cloud (10000+i*10); prefer the
+        // item flagged is_thumbnail, else the first. Same URL types as web.
+        data class Cand(val order: Int, val key: String, val url: String, val thumb: Boolean)
         val base = basePhotos.filter { it.hidden != true && it.purged != true }
-            .sortedWith(compareBy({ it.sortOrder ?: 0 }, { it.assetPath ?: "" }))
-        val baseChosen = base.firstOrNull { it.isThumbnail == true } ?: base.firstOrNull()
-        return baseChosen?.assetPath?.let { webAssetUrl(it) }
+            .mapIndexed { i, b ->
+                Cand(
+                    b.sortOrder ?: i * 10,
+                    "base:${b.assetPath ?: i}",
+                    b.assetPath?.let { webAssetUrl(it) } ?: "",
+                    b.isThumbnail == true,
+                )
+            }
+        val cloud = galleryPhotos(photos).mapIndexed { i, p ->
+            Cand(
+                p.sortOrder?.takeIf { it != 0 } ?: (10000 + i * 10),
+                "cloud:${p.id}",
+                displayUrl(p) ?: "",
+                p.isThumbnail == true,
+            )
+        }
+        val merged = (base + cloud).sortedWith(compareBy({ it.order }, { it.key }))
+        val chosen = merged.firstOrNull { it.thumb } ?: merged.firstOrNull()
+        return chosen?.url?.takeIf { it.isNotBlank() }
     }
 }

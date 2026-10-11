@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Plant Room</string>
+    <string name="app_name">Guren\'s Garden</string>
+    <string name="widget_description">Quick view of the collection: plants profiled, what is overdue and what to check today.</string>
 </resources>

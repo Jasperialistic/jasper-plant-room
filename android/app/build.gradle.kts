@@ -78,6 +78,8 @@ dependencies {
     // Coil 3 splits network fetching into its own artifact — without it,
     // AsyncImage silently renders nothing for http(s) URLs (the "no photos" bug).
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
+    // Bottom navigation glyphs (web #mobileAppNav mirror)
+    implementation("androidx.compose.material:material-icons-core")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
