@@ -10,6 +10,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -52,6 +54,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -250,23 +254,21 @@ private fun ShellScreen(
             modifier = Modifier.fillMaxSize()
         )
         Column(Modifier.fillMaxSize()) {
-        // ── topbar (web .topbar) ──────────────────────────────────────────
+        // clean top edge: brand lives in the hero below; account entry = leaf icon
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 20.sp)
-                Text(
-                    "collection · growth · care",
-                    color = NoirColors.Muted, fontSize = 10.5.sp, letterSpacing = 1.2.sp
-                )
-            }
-            TextButton(onClick = onOwnerSignIn) {
-                Text(
-                    if (owner) "OWNER" else "SIGN IN",
-                    color = NoirColors.Champagne, fontSize = 11.sp, letterSpacing = 1.sp
-                )
+            Spacer(Modifier.weight(1f))
+            Box(
+                Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
+                    .clickable(onClick = onOwnerSignIn),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(painterResource(R.drawable.pr_leaf), "Account", modifier = Modifier.size(30.dp))
             }
         }
 
@@ -282,7 +284,22 @@ private fun ShellScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 30.sp)
+                Box {
+                    Text(
+                        "Guren's Garden",
+                        color = Color(0x59000000), fontSize = 33.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
+                    Text(
+                        "Guren's Garden",
+                        fontSize = 33.sp, fontWeight = FontWeight.Medium,
+                        style = TextStyle(
+                            brush = Brush.linearGradient(
+                                listOf(NoirColors.ChampagneHi, NoirColors.Ivory, NoirColors.Champagne)
+                            )
+                        )
+                    )
+                }
                 Text(
                     "Plants train patience. Good things come to those who wait.",
                     color = NoirColors.Champagne, fontSize = 15.sp,
