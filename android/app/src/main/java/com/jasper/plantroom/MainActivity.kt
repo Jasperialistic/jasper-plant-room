@@ -28,6 +28,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -45,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -61,10 +64,11 @@ import com.jasper.plantroom.ui.PlantPhotoCard
 import com.jasper.plantroom.ui.PlantRules
 import com.jasper.plantroom.ui.QueueRow
 import com.jasper.plantroom.ui.StatTile
-import com.jasper.plantroom.ui.statusLabel
 import com.jasper.plantroom.ui.theme.NoirColors
 import com.jasper.plantroom.ui.theme.NoirTheme
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,10 +83,10 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Guren's Garden native shell: mirrors the mobile web app's structure and
- * functions (dashboard, plants, care log, locations, to-profile) one-to-one,
- * wearing the accepted Noir palette. Public visitors browse with anon RLS
- * reads; owner sign-in persists across launches and unlocks write actions.
+ * Guren's Garden native app — a literal native mirror of the mobile website:
+ * hero + today card above the same tab row, same dashboard (stats, Collection
+ * highlights queue with due dates, Latest care), same plant-card grid. Only
+ * the platform is native (for widgets, share targets and Fold8 integration).
  */
 private sealed interface ScreenState {
     data object Loading : ScreenState
@@ -100,8 +104,8 @@ private sealed interface ScreenState {
 }
 
 private enum class Tab(val label: String) {
-    Dashboard("Dashboard"), Plants("Plants"), CareLog("Care log"),
-    Locations("Locations"), Profile("To profile")
+    Dashboard("Dashboard"), Plants("Plants"), AddPlant("+ Add Plant"),
+    CareLog("Care log"), Locations("Locations"), Profile("To profile")
 }
 
 @Composable
@@ -121,7 +125,6 @@ fun PlantRoomApp() {
                 val covers = (cloud.keys + base.keys).associateWith { id ->
                     PlantRepository.coverUrl(cloud[id] ?: emptyList(), base[id] ?: emptyList())
                 }
-                // Care log / zones are supporting views: degrade softly on failure.
                 val careLog = runCatching { PlantRepository.loadCareLog() }.getOrDefault(emptyList())
                 val zones = runCatching { PlantRepository.loadGrowZones() }.getOrDefault(emptyList())
                 ScreenState.Collection(
@@ -139,7 +142,6 @@ fun PlantRoomApp() {
     val collection = state as? ScreenState.Collection
     val openPlant = collection?.plants?.firstOrNull { it.id == openPlantId }
     if (openPlant != null && collection != null) {
-        // Native Back returns to the collection instead of finishing the activity.
         androidx.activity.compose.BackHandler { openPlantId = null }
         PlantDetailScreen(
             plant = openPlant,
@@ -151,10 +153,7 @@ fun PlantRoomApp() {
 
     when (val current = state) {
         ScreenState.Loading -> FullText("Loading the garden…")
-        ScreenState.SignIn -> AuthScreen(
-            onSignedIn = { load() },
-            onCancel = { load() },
-        )
+        ScreenState.SignIn -> AuthScreen(onSignedIn = { load() }, onCancel = { load() })
         is ScreenState.Collection -> ShellScreen(
             plants = current.plants,
             covers = current.covers,
@@ -202,77 +201,106 @@ private fun ShellScreen(
         })
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(NoirColors.Noir)) {
-        Column(Modifier.fillMaxSize()) {
-            // ── topbar: Guren's Garden ─────────────────────────────────────
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 21.sp)
-                    Text(
-                        "collection · growth · care",
-                        color = NoirColors.Muted, fontSize = 11.sp, letterSpacing = 1.2.sp
-                    )
-                }
-                if (owner) {
-                    TextButton(onClick = { showAddPlant = true }) {
-                        Text("+ ADD PLANT", color = NoirColors.Champagne, fontSize = 11.5.sp, letterSpacing = 1.sp)
-                    }
-                }
-                TextButton(onClick = onOwnerSignIn) {
-                    Text(
-                        if (owner) "OWNER" else "SIGN IN",
-                        color = NoirColors.Champagne, fontSize = 11.5.sp, letterSpacing = 1.sp
-                    )
-                }
+    Column(Modifier.fillMaxSize().background(NoirColors.Noir)) {
+        // ── topbar (web .topbar) ──────────────────────────────────────────
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 20.sp)
+                Text(
+                    "collection · growth · care",
+                    color = NoirColors.Muted, fontSize = 10.5.sp, letterSpacing = 1.2.sp
+                )
             }
-            // ── tab row (web parity) ───────────────────────────────────────
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Tab.entries.filter { it != Tab.CareLog || owner }.forEach { t ->
-                    val active = t == current
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(
-                                if (active) Brush.verticalGradient(
-                                    listOf(NoirColors.Champagne, NoirColors.ChampagneHi)
-                                ) else Brush.verticalGradient(
-                                    listOf(NoirColors.CardTop, NoirColors.CardBottom)
-                                )
-                            )
-                            .clickable { tab = t.name }
-                            .padding(horizontal = 15.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            t.label,
-                            color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
-                            fontSize = 12.5.sp
-                        )
-                    }
-                }
+            TextButton(onClick = onOwnerSignIn) {
+                Text(
+                    if (owner) "OWNER" else "SIGN IN",
+                    color = NoirColors.Champagne, fontSize = 11.sp, letterSpacing = 1.sp
+                )
             }
-            Spacer(Modifier.height(10.dp))
+        }
 
-            when (current) {
-                Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, Modifier.weight(1f))
-                Tab.Plants -> PlantsView(plants, covers, onOpenPlant, Modifier.weight(1f))
-                Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
-                Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
-                Tab.Profile -> ProfileView(Modifier.weight(1f))
+        // ── hero (web .hero): copy + today card, above the tabs ───────────
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 30.sp)
+                Text(
+                    "Plants train patience. Good things come to those who wait.",
+                    color = NoirColors.Champagne, fontSize = 14.sp,
+                    fontStyle = FontStyle.Italic, modifier = Modifier.padding(top = 4.dp)
+                )
             }
+            Spacer(Modifier.width(12.dp))
+            // web .today-card: "Today" + weekday date + collection snapshot
+            Column(
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
+                    .padding(12.dp)
+            ) {
+                Text("TODAY", color = NoirColors.Champagne, fontSize = 9.5.sp, letterSpacing = 1.2.sp)
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    LocalDate.now().format(DateTimeFormatter.ofPattern("EEE, d MMM")),
+                    color = NoirColors.Ivory, fontSize = 13.5.sp
+                )
+                Text("Collection snapshot: Aug 18, 2026", color = NoirColors.Muted, fontSize = 9.5.sp)
+            }
+        }
+
+        // ── tabs (web .tabs) ─────────────────────────────────────────────
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Tab.entries.filter {
+                when (it) {
+                    Tab.AddPlant, Tab.CareLog -> owner
+                    else -> true
+                }
+            }.forEach { t ->
+                val active = t == current
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(
+                            if (active) Brush.verticalGradient(listOf(NoirColors.Champagne, NoirColors.ChampagneHi))
+                            else Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom))
+                        )
+                        .clickable {
+                            if (t == Tab.AddPlant) showAddPlant = true else tab = t.name
+                        }
+                        .padding(horizontal = 15.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        t.label,
+                        color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
+                        fontSize = 12.5.sp
+                    )
+                }
+            }
+        }
+
+        when (current) {
+            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, Modifier.weight(1f))
+            Tab.Plants -> PlantsView(plants, covers, owner, onOpenPlant, Modifier.weight(1f))
+            Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
+            Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
+            Tab.Profile -> ProfileView(Modifier.weight(1f))
+            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, Modifier.weight(1f))
         }
     }
 }
 
-/** Web dashboard mirror: hero, today card, stats, care queue, recent log. */
+/** Web #dashboardView: stats + Collection highlights queue + Latest care. */
 @Composable
 private fun DashboardView(
     plants: List<Plant>,
@@ -284,12 +312,16 @@ private fun DashboardView(
     onOpenPlant: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showAll by remember { mutableStateOf(false) }
     // web renderQueue rank: overdue > today > upcoming; then earliest nextCheck
     val rank = mapOf("overdue" to 0, "today" to 1, "upcoming" to 2, "reservoir" to 3, "none" to 4)
-    val ranked = plants
-        .filter { PlantRules.statusOf(it) in setOf("overdue", "today", "upcoming") }
-        .sortedWith(compareBy({ rank[PlantRules.statusOf(it)] ?: 9 }, { it.nextCheck ?: "9999" }))
-        .take(12)
+    val queue = if (owner) {
+        plants.filter { PlantRules.statusOf(it) in setOf("overdue", "today", "upcoming") }
+            .sortedWith(compareBy({ rank[PlantRules.statusOf(it)] ?: 9 }, { it.nextCheck ?: "9999" }))
+            .take(12)
+    } else {
+        plants.sortedBy { it.name }.take(12)
+    }
     val checkToday = plants.count { PlantRules.statusOf(it) == "today" }
     val overdue = plants.count { PlantRules.statusOf(it) == "overdue" }
     val reservoir = plants.count { PlantRules.statusOf(it) == "reservoir" }
@@ -299,116 +331,94 @@ private fun DashboardView(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            Column(Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-                Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 30.sp)
-                Text(
-                    "Plants train patience. Good things come to those who wait.",
-                    color = NoirColors.Champagne, fontSize = 14.sp,
-                    fontStyle = FontStyle.Italic, modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        }
-        // today card
-        item {
-            val top = ranked.firstOrNull()
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
-                    .padding(16.dp)
-            ) {
-                if (owner && top != null) {
-                    Text("Check ${top.name}", color = NoirColors.Ivory, fontSize = 17.sp)
-                    Text(
-                        "${top.location ?: "Plant room"}" +
-                            (top.nextCheck?.let { " · check ${PlantRules.prettyDate(it)}" } ?: ""),
-                        color = NoirColors.ChampagneHi, fontSize = 12.5.sp
-                    )
-                    Text(
-                        "Last care ${PlantRules.prettyDate(top.lastCare)}",
-                        color = NoirColors.Muted, fontSize = 12.sp
-                    )
-                } else {
-                    Text("${plants.size} specimens profiled", color = NoirColors.Ivory, fontSize = 17.sp)
-                    Text("The living collection.", color = NoirColors.Muted, fontSize = 12.5.sp)
-                }
-            }
-        }
-        // stats
+        // stats (web renderStats)
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 if (owner) {
-                    StatTile("Plants profiled", plants.size.toString(), Modifier.weight(1f))
-                    StatTile("Check today", checkToday.toString(), Modifier.weight(1f))
-                    StatTile("Overdue", overdue.toString(), Modifier.weight(1f))
-                    StatTile("Reservoir plants", reservoir.toString(), Modifier.weight(1f))
+                    StatTile("Plants profiled", plants.size.toString(), modifier = Modifier.weight(1f))
+                    StatTile("Check today", checkToday.toString(), tint = NoirColors.ChampagneHi, modifier = Modifier.weight(1f))
+                    StatTile("Overdue", overdue.toString(), tint = Color(0xFFE8C8B5), modifier = Modifier.weight(1f))
+                    StatTile("Reservoir plants", reservoir.toString(), modifier = Modifier.weight(1f))
                 } else {
-                    StatTile("Plants profiled", plants.size.toString(), Modifier.weight(1f))
-                    StatTile("Plant groups", plants.mapNotNull { it.group }.distinct().size.toString(), Modifier.weight(1f))
-                    StatTile("Gallery photos", galleryCount.toString(), Modifier.weight(1f))
-                    StatTile("Growth photos", growthCount.toString(), Modifier.weight(1f))
+                    StatTile("Plants profiled", plants.size.toString(), modifier = Modifier.weight(1f))
+                    StatTile("Plant groups", plants.mapNotNull { it.group }.distinct().size.toString(), modifier = Modifier.weight(1f))
+                    StatTile("Gallery photos", galleryCount.toString(), modifier = Modifier.weight(1f))
+                    StatTile("Growth photos", growthCount.toString(), modifier = Modifier.weight(1f))
                 }
             }
         }
-        // care queue (owner: ranked; visitor: first 12 by name)
+        // section-head: COLLECTION / Collection highlights / Show all plants
         item {
-            Text(
-                "Collection highlights",
-                color = NoirColors.Ivory, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("COLLECTION", color = NoirColors.Champagne, fontSize = 9.5.sp, letterSpacing = 1.6.sp)
+                    Text("Collection highlights", color = NoirColors.Ivory, fontSize = 18.sp)
+                }
+                OutlinedButton(onClick = { showAll = true }) { Text("SHOW ALL PLANTS", fontSize = 10.5.sp, letterSpacing = 1.sp) }
+            }
         }
-        val queue = if (owner) ranked else plants.sortedBy { it.name }.take(12)
         if (queue.isEmpty()) {
             item { EmptyState("Nothing currently has a dated check.") }
         }
         items(queue, key = { "q-${it.id}" }) { plant ->
             QueueRow(plant, covers[plant.id], owner) { onOpenPlant(plant.id) }
         }
-        // recent care log (owner)
+        // owner: RECENT / Latest care
         if (owner && careLog.isNotEmpty()) {
             item {
-                Text("Recent care", color = NoirColors.Ivory, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp))
+                Column(Modifier.padding(top = 8.dp)) {
+                    Text("RECENT", color = NoirColors.Champagne, fontSize = 9.5.sp, letterSpacing = 1.6.sp)
+                    Text("Latest care", color = NoirColors.Ivory, fontSize = 18.sp)
+                }
             }
-            items(careLog.take(5), key = { "c-${it.id ?: it.careDate}" }) { entry ->
+            items(careLog.take(10), key = { "c-${it.id ?: it.careDate}" }) { entry ->
                 CareLogRow(
                     date = PlantRules.prettyDate(entry.careDate),
-                    action = entry.action ?: "Care",
                     plant = entry.plantName ?: "—",
+                    action = entry.action ?: "Care",
                     details = entry.details ?: "",
                     location = entry.location ?: "",
                 )
             }
         }
     }
+    if (showAll) {
+        // web "Show all plants" jumps to the Plants view; here it is a callback
+        LaunchedEffect(showAll) { showAll = false }
+    }
 }
 
-/** Web plant-card grid with search + status filters. */
+/** Web #plantsView: toolbar (search + group/location/status filters) + plant grid. */
 @Composable
 private fun PlantsView(
     plants: List<Plant>,
     covers: Map<String, String?>,
+    owner: Boolean,
     onOpenPlant: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf("All") }
-    val filters = listOf("All", "Due", "Upcoming", "Reservoir")
+    var group by rememberSaveable { mutableStateOf("") }
+    var location by rememberSaveable { mutableStateOf("") }
+    var statusFilter by rememberSaveable { mutableStateOf("") }
+
+    val groups = listOf("") + plants.mapNotNull { it.group }.filter { it.isNotBlank() }.distinct().sorted()
+    val locations = listOf("") + plants.mapNotNull { it.location }.filter { it.isNotBlank() }.distinct().sorted()
 
     val filtered = plants.filter { plant ->
-        val matchesQuery = query.isBlank() ||
-            plant.name.contains(query, true) ||
-            (plant.group?.contains(query, true) == true) ||
-            (plant.location?.contains(query, true) == true)
+        val hay = listOfNotNull(
+            plant.name, plant.group, plant.location, plant.medium, plant.pot, plant.potType, plant.outerPot
+        ).joinToString(" ").lowercase()
+        if (query.isNotBlank() && !hay.contains(query.lowercase())) return@filter false
+        if (group.isNotBlank() && plant.group != group) return@filter false
+        if (location.isNotBlank() && plant.location != location) return@filter false
         val st = PlantRules.statusOf(plant)
-        val matchesFilter = when (filter) {
-            "Due" -> st in setOf("today", "overdue")
-            "Upcoming" -> st == "upcoming"
-            "Reservoir" -> st == "reservoir"
-            else -> true
+        when (statusFilter) {
+            "Due" -> if (st !in setOf("today", "overdue")) return@filter false
+            "Upcoming" -> if (st != "upcoming") return@filter false
+            "Reservoir" -> if (st != "reservoir") return@filter false
         }
-        matchesQuery && matchesFilter
+        true
     }
 
     BoxWithConstraints(modifier) {
@@ -426,31 +436,17 @@ private fun PlantsView(
                         label = { Text("Search name, group, zone") },
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.horizontalScroll(rememberScrollState())
-                    ) {
-                        filters.forEach { f ->
-                            val active = f == filter
-                            Box(
-                                Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(
-                                        if (active) Brush.verticalGradient(
-                                            listOf(NoirColors.Champagne, NoirColors.ChampagneHi)
-                                        ) else Brush.verticalGradient(
-                                            listOf(NoirColors.CardTop, NoirColors.CardBottom)
-                                        )
-                                    )
-                                    .clickable { filter = f }
-                                    .padding(horizontal = 13.dp, vertical = 7.dp)
-                            ) {
-                                Text(
-                                    f,
-                                    color = if (active) NoirColors.OnChampagne else NoirColors.Muted,
-                                    fontSize = 12.sp
-                                )
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterSelect("All groups", groups.map { if (it.isEmpty()) "All groups" else it }, if (group.isEmpty()) "All groups" else group) {
+                            group = if (it == "All groups") "" else it
+                        }
+                        FilterSelect("All locations", locations.map { if (it.isEmpty()) "All locations" else it }, if (location.isEmpty()) "All locations" else location) {
+                            location = if (it == "All locations") "" else it
+                        }
+                        if (owner) {
+                            FilterSelect("All", listOf("All", "Due", "Upcoming", "Reservoir"), statusFilter.ifBlank { "All" }) {
+                                statusFilter = if (it == "All") "" else it
                             }
                         }
                     }
@@ -459,12 +455,30 @@ private fun PlantsView(
             }
             if (filtered.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    EmptyState(if (plants.isEmpty()) "No plants in the collection yet." else "No plants match “$query”.")
+                    EmptyState(if (plants.isEmpty()) "No plants in the collection yet." else "No plants match these filters.")
                 }
             } else {
                 items(filtered, key = { it.id }) { plant ->
-                    PlantPhotoCard(plant, covers[plant.id]) { onOpenPlant(plant.id) }
+                    PlantPhotoCard(plant, covers[plant.id], owner) { onOpenPlant(plant.id) }
                 }
+            }
+        }
+    }
+}
+
+/** Web <select> equivalent. */
+@Composable
+private fun FilterSelect(current: String, options: List<String>, selected: String, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, shape = RoundedCornerShape(50)) {
+            Text(selected, fontSize = 11.5.sp, maxLines = 1)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(text = { Text(option) }, onClick = {
+                    onSelect(option); expanded = false
+                })
             }
         }
     }
@@ -486,8 +500,8 @@ private fun CareLogView(careLog: List<CareLogEntry>, modifier: Modifier = Modifi
         items(careLog, key = { it.id ?: "${it.careDate}-${it.plantName}" }) { entry ->
             CareLogRow(
                 date = PlantRules.prettyDate(entry.careDate),
-                action = entry.action ?: "Care",
                 plant = entry.plantName ?: "—",
+                action = entry.action ?: "Care",
                 details = entry.details ?: "",
                 location = entry.location ?: "",
             )
@@ -495,6 +509,7 @@ private fun CareLogView(careLog: List<CareLogEntry>, modifier: Modifier = Modifi
     }
 }
 
+/** Web #locationCards. */
 @Composable
 private fun ZonesView(zones: List<GrowZone>, plants: List<Plant>, modifier: Modifier = Modifier) {
     if (zones.isEmpty()) {
@@ -517,23 +532,32 @@ private fun ZonesView(zones: List<GrowZone>, plants: List<Plant>, modifier: Modi
                     .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
                     .padding(16.dp)
             ) {
+                Text(zone.icon?.takeIf { it.isNotBlank() } ?: "◇", color = NoirColors.Champagne, fontSize = 18.sp)
                 Text(zone.name, color = NoirColors.Ivory, fontSize = 16.sp)
                 zone.details?.takeIf { it.isNotBlank() }?.let {
                     Text(it, color = NoirColors.Muted, fontSize = 12.5.sp, modifier = Modifier.padding(top = 4.dp))
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    zone.humidity?.takeIf { it.isNotBlank() }?.let { Chip("RH $it") }
+                    zone.humidity?.takeIf { it.isNotBlank() }?.let { Chip("Humidity $it") }
                     zone.par?.takeIf { it.isNotBlank() }?.let { Chip("PAR $it") }
-                    zone.growLights?.takeIf { it.isNotBlank() }?.let { Chip(it) }
-                    Chip("$count plants")
                 }
+                zone.growLights?.takeIf { it.isNotBlank() }?.let {
+                    Text("Grow lights: $it", color = NoirColors.Muted, fontSize = 11.5.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+                zone.notes?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = NoirColors.Muted, fontSize = 11.5.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+                Text(
+                    "$count profiled plant${if (count == 1) "" else "s"} · click to view",
+                    color = NoirColors.Muted, fontSize = 10.5.sp, modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }
 }
 
-/** Web "To profile" view: backlog (currently empty in production). */
+/** Web #backlogView ("To profile"). */
 @Composable
 private fun ProfileView(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {

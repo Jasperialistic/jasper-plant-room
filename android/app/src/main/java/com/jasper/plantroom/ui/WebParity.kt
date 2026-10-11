@@ -26,9 +26,7 @@ import java.time.temporal.ChronoUnit
 private val ChipBg = Color(0x22C9B18A)
 
 /**
- * Care rules mirrored VERBATIM from the web (index.html:1653-1655):
- * isReservoir = watering mode contains "reservoir";
- * statusOf: no nextCheck -> none; past = overdue; today = today; future = upcoming.
+ * Care rules mirrored VERBATIM from the web (index.html:1653-1655).
  */
 object PlantRules {
 
@@ -64,63 +62,24 @@ internal fun statusLabel(status: String): String = when (status) {
     else -> "Upcoming"
 }
 
-/** Photo card mirroring the web plant-card: photo top, name, sub, chips, care line. */
+/**
+ * Web .stat tile: small caps label on top, big value below.
+ * tint: web colors the "Check today" value champagne and "Overdue" warm red.
+ */
 @Composable
-fun PlantPhotoCard(plant: Plant, photoUrl: String?, onClick: () -> Unit) {
-    val status = PlantRules.statusOf(plant)
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+fun StatTile(label: String, value: String, tint: Color = NoirColors.Ivory, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
             .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
-            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp)
     ) {
-        Column {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(172.dp)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .background(NoirColors.CardBottom)
-            ) {
-                if (!photoUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = photoUrl,
-                        contentDescription = plant.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Text(
-                        "\uD83C\uDF31", fontSize = 40.sp,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-            Column(Modifier.padding(14.dp)) {
-                Text(
-                    plant.name, color = NoirColors.Ivory, fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    listOfNotNull(plant.group, plant.location).joinToString(" · ").ifBlank { "Specimen" },
-                    color = NoirColors.Muted, fontSize = 12.5.sp, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Chip(statusLabel(status))
-                    plant.group?.let { Chip(it) }
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Last care ${PlantRules.prettyDate(plant.lastCare)} · Next check " +
-                        (plant.nextCheck?.let { PlantRules.prettyDate(it) } ?: "Reservoir-based"),
-                    color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        Text(
+            label.uppercase(), color = NoirColors.Muted, fontSize = 9.5.sp,
+            letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(value, color = tint, fontWeight = FontWeight.SemiBold, fontSize = 26.sp)
     }
 }
 
@@ -136,26 +95,88 @@ fun Chip(text: String) {
     }
 }
 
-/** Stat tile mirroring the web .stat cards. */
+/**
+ * Web .plant-card: photo, plant-top (name + sub=location + status chip for
+ * owner), chips (group · pot · mode), owner care-line (Last care / Next check).
+ */
 @Composable
-fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier
-            .clip(RoundedCornerShape(12.dp))
+fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () -> Unit) {
+    val status = PlantRules.statusOf(plant)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
-            .padding(horizontal = 12.dp, vertical = 12.dp)
-            .widthIn(min = 78.dp)
+            .clickable(onClick = onClick)
     ) {
-        Text(value, color = NoirColors.Ivory, fontWeight = FontWeight.SemiBold, fontSize = 19.sp)
-        Spacer(Modifier.height(3.dp))
-        Text(
-            label.uppercase(), color = NoirColors.Muted, fontSize = 9.5.sp,
-            letterSpacing = 0.8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-        )
+        Column {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .background(NoirColors.CardBottom)
+            ) {
+                if (!photoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = photoUrl,
+                        contentDescription = plant.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text("\uD83C\uDF31", fontSize = 40.sp, modifier = Modifier.align(Alignment.Center))
+                }
+            }
+            Column(Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            plant.name, color = NoirColors.Ivory, fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            plant.location ?: "",
+                            color = NoirColors.Muted, fontSize = 12.sp, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (owner) Chip(statusLabel(status))
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Chip(plant.group ?: "Plant")
+                    plant.pot?.takeIf { it.isNotBlank() }?.let { Chip(it) }
+                    plant.wateringMode?.takeIf { it.isNotBlank() }?.let { Chip(it) }
+                }
+                if (owner) {
+                    Spacer(Modifier.height(10.dp))
+                    Row {
+                        Column(Modifier.weight(1f)) {
+                            Text("Last care", color = NoirColors.Muted, fontSize = 9.5.sp, letterSpacing = 1.sp)
+                            Text(
+                                PlantRules.prettyDate(plant.lastCare),
+                                color = NoirColors.ChampagneHi, fontSize = 12.5.sp, fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("Next check", color = NoirColors.Muted, fontSize = 9.5.sp, letterSpacing = 1.sp)
+                            Text(
+                                plant.nextCheck?.let { PlantRules.prettyDate(it) } ?: "Reservoir-based",
+                                color = NoirColors.ChampagneHi, fontSize = 12.5.sp, fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-/** Care-queue row mirroring the web queue rows (thumb + name + status). */
+/**
+ * Web .queue-item: thumb, name, sub (owner: "location · check date";
+ * visitor: "group · location"), status chip for owner.
+ */
 @Composable
 fun QueueRow(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () -> Unit) {
     val status = PlantRules.statusOf(plant)
@@ -195,9 +216,11 @@ fun QueueRow(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () -> Uni
     }
 }
 
-/** Care-log timeline row mirroring the web timeline items. */
+/**
+ * Web .timeline-item: date column + strong "plant · action" + "details · location".
+ */
 @Composable
-fun CareLogRow(date: String, action: String, plant: String, details: String, location: String) {
+fun CareLogRow(date: String, plant: String, action: String, details: String, location: String) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -205,25 +228,23 @@ fun CareLogRow(date: String, action: String, plant: String, details: String, loc
             .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
             .padding(12.dp)
     ) {
-        Column(Modifier.width(84.dp)) {
+        Column(Modifier.width(88.dp)) {
             Text(date, color = NoirColors.Champagne, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
         }
         Column(Modifier.weight(1f)) {
             Text(
-                "$action · $plant", color = NoirColors.Ivory, fontSize = 13.5.sp,
+                "$plant · $action", color = NoirColors.Ivory, fontSize = 13.5.sp,
                 fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
-            if (details.isNotBlank()) {
-                Text(details, color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            if (location.isNotBlank()) {
-                Text(location, color = NoirColors.Muted, fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val second = listOf(details, location).filter { it.isNotBlank() }.joinToString(" · ")
+            if (second.isNotBlank()) {
+                Text(second, color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
 }
 
-/** Simple centered empty state, matching the web .empty blocks. */
+/** Web .empty block. */
 @Composable
 fun EmptyState(text: String) {
     Box(
