@@ -58,9 +58,15 @@ Every interactive/raised surface is built physically, never flat:
 - **Owner photography is CONTENT only** (specimen cards, galleries, profiles) —
   never used as background or decorative imagery.
 - **Headers and backgrounds use GENERATED botanical artwork**: faint translucent
-  leaf/frond silhouettes and line-art in the champagne/espresso/emerald palette.
-  Wallpaper-clean, elegant, explicitly **not photorealistic**. Vector SVG assets
+  leaf silhouettes and line-art in the champagne/espresso/emerald palette.
+  Wallpaper-clean, elegant, explicitly **not photorealistic**. Motif family:
+  **Anthurium hearts (crystallinum / warocqueanum) with prominent venation**,
+  Monstera split-leaves, Alocasia arrowheads. Vector SVG assets
   (`img/art/header-garden.svg`, `banner-frond.svg`, `wallpaper-leaves.svg`).
+- **Composition is symmetric and structural — never scattered wallpaper.**
+  Motifs are arranged as mirrored left/right clusters, balanced pairs and edge
+  frames that echo the UI grid, with clean centers for content. No random
+  floral-repeat pattern ("grandmother wallpaper") anywhere.
 - **Headers are image-wrapped, never bare text on flat color.** Page mastheads
   and major section headers layer the generated botanical art with dark gradient
   veils (top-dark → bottom-near-black) plus a warm champagne radial light; serif
