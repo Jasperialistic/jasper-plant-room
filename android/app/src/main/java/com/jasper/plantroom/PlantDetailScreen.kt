@@ -50,6 +50,8 @@ private sealed interface DetailState {
 fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
     var state by remember { mutableStateOf<DetailState>(DetailState.Loading) }
     var showUpload by remember { mutableStateOf(false) }
+    var showEdit by remember { mutableStateOf(false) }
+    var showCare by remember { mutableStateOf(false) }
     var refreshTick by remember { mutableStateOf(0) }
 
     LaunchedEffect(plant.id, refreshTick) {
@@ -72,13 +74,33 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                 TextButton(onClick = onBack) { Text("‹ COLLECTION", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne) }
                 Spacer(Modifier.weight(1f))
                 if (owner) {
+                    TextButton(onClick = { showCare = true }) {
+                        Text("LOG CARE", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
+                    }
                     TextButton(onClick = { showUpload = true }) {
                         Text("ADD GROWTH PHOTOS", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
                     }
-                    TextButton(onClick = { /* Node 5 editing entry point */ }) {
+                    TextButton(onClick = { showEdit = true }) {
                         Text("EDIT", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
                     }
                 }
+            }
+        }
+
+        if (showEdit) {
+            item {
+                com.jasper.plantroom.ui.PlantEditSheet(plant = plant, onDismiss = { saved ->
+                    showEdit = false
+                    if (saved) refreshTick++
+                })
+            }
+        }
+        if (showCare) {
+            item {
+                com.jasper.plantroom.ui.CareLogSheet(plant = plant, onDismiss = { saved ->
+                    showCare = false
+                    if (saved) refreshTick++
+                })
             }
         }
 

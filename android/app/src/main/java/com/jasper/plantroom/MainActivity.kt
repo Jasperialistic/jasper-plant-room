@@ -123,6 +123,7 @@ fun PlantRoomApp() {
             owner = current.owner,
             onOpenPlant = { openPlantId = it },
             onOwnerSignIn = { state = ScreenState.SignIn },
+            onRefresh = { load() },
         )
         is ScreenState.Failed -> FailureScreen(message = current.message, onRetry = { load() })
     }
@@ -197,12 +198,20 @@ private fun CollectionScreen(
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
     onOwnerSignIn: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var showAddPlant by rememberSaveable { mutableStateOf(false) }
     val filtered = plants.filter {
         query.isBlank() || it.name.contains(query, ignoreCase = true) ||
             (it.group?.contains(query, ignoreCase = true) == true) ||
             (it.location?.contains(query, ignoreCase = true) == true)
+    }
+    if (showAddPlant) {
+        com.jasper.plantroom.ui.AddPlantSheet(onDismiss = { saved ->
+            showAddPlant = false
+            if (saved) onRefresh()
+        })
     }
 
     // Adaptive: two panes on the unfolded inner display, one on the Fold8 cover.
@@ -217,6 +226,11 @@ private fun CollectionScreen(
                         style = MaterialTheme.typography.headlineMedium,
                         color = NoirColors.Ivory,
                     )
+                }
+                if (owner) {
+                    TextButton(onClick = { showAddPlant = true }) {
+                        Text("ADD PLANT", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
+                    }
                 }
                 TextButton(onClick = onOwnerSignIn) {
                     Text(if (owner) "OWNER" else "OWNER SIGN IN", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
