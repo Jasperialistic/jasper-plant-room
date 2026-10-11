@@ -3,7 +3,9 @@ package com.jasper.plantroom.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -105,7 +107,7 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () 
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
             .clickable(onClick = onClick)
     ) {
@@ -113,8 +115,8 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () 
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .aspectRatio(4f / 3f)
+                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                     .background(NoirColors.CardBottom)
             ) {
                 if (!photoUrl.isNullOrBlank()) {
@@ -143,15 +145,17 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () 
                     }
                     if (owner) Chip(statusLabel(status))
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(13.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Chip(plant.group ?: "Plant")
                     plant.pot?.takeIf { it.isNotBlank() }?.let { Chip(it) }
                     plant.wateringMode?.takeIf { it.isNotBlank() }?.let { Chip(it) }
                 }
                 if (owner) {
-                    Spacer(Modifier.height(10.dp))
-                    Row {
+                    Spacer(Modifier.height(13.dp))
+                    HorizontalDivider(color = Color(0x2EC9B18A), thickness = 1.dp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column(Modifier.weight(1f)) {
                             Text("Last care", color = NoirColors.Muted, fontSize = 9.5.sp, letterSpacing = 1.sp)
                             Text(

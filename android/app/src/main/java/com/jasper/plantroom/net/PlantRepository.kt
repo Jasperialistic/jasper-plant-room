@@ -224,12 +224,29 @@ object PlantRepository {
     /** Cover selection mirrors web: flagged thumbnail, else first gallery row,
      *  falling back to bundled base photos when a plant has no cloud gallery. */
     fun coverUrl(photos: List<PlantPhoto>, basePhotos: List<PlantBasePhoto> = emptyList()): String? {
-        val gallery = galleryPhotos(photos)
-        val chosen = gallery.firstOrNull { it.isThumbnail == true } ?: gallery.firstOrNull()
-        if (chosen != null) return displayUrl(chosen)
+        // web photo() (index.html:1668): merged gallery order — base first by
+        // default effective_order (i*10) then cloud (10000+i*10); prefer the
+        // item flagged is_thumbnail, else the first. Same URL types as web.
+        data class Cand(val order: Int, val key: String, val url: String, val thumb: Boolean)
         val base = basePhotos.filter { it.hidden != true && it.purged != true }
-            .sortedWith(compareBy({ it.sortOrder ?: 0 }, { it.assetPath ?: "" }))
-        val baseChosen = base.firstOrNull { it.isThumbnail == true } ?: base.firstOrNull()
-        return baseChosen?.assetPath?.let { webAssetUrl(it) }
+            .mapIndexed { i, b ->
+                Cand(
+                    b.sortOrder ?: i * 10,
+                    "base:${b.assetPath ?: i}",
+                    b.assetPath?.let { webAssetUrl(it) } ?: "",
+                    b.isThumbnail == true,
+                )
+            }
+        val cloud = galleryPhotos(photos).mapIndexed { i, p ->
+            Cand(
+                p.sortOrder?.takeIf { it != 0 } ?: (10000 + i * 10),
+                "cloud:${p.id}",
+                displayUrl(p) ?: "",
+                p.isThumbnail == true,
+            )
+        }
+        val merged = (base + cloud).sortedWith(compareBy({ it.order }, { it.key }))
+        val chosen = merged.firstOrNull { it.thumb } ?: merged.firstOrNull()
+        return chosen?.url?.takeIf { it.isNotBlank() }
     }
 }
