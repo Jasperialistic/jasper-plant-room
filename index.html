@@ -1716,7 +1716,7 @@ function setOwnerUI(){
  $('#brandSubtitle').textContent=isOwner?'owner mode · cloud synced':'collection · gallery · growth journal';
  $('#heroEyebrow').textContent=isOwner?'SMART CHECKLIST':'JASPER\'S COLLECTION';
  $('#heroTitle').textContent='Guren\'s Garden';
- $('#heroText').innerHTML=isOwner?'The schedule only tells you <em>when to inspect</em>. Moisture, pot weight, reservoir level and the actual plant decide what happens next.':'Browse the collection, plant portraits and growth timelines. Growth Progress records how each plant changes over time.';
+ $('#heroText').textContent='Plants train patience. Good things come to those who wait.';
  $('#priorityEyebrow').textContent=isOwner?'PRIORITY':'COLLECTION';
  $('#priorityTitle').textContent=isOwner?'Check queue':'Collection highlights';
  if(!isOwner&&($('#logView').classList.contains('active')||$('#addplantView').classList.contains('active'))) $('[data-view="plants"]').click();
@@ -1855,7 +1855,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v48-kemuri.js?v=4.43.0"></script>
   <script src="v49-organic-experience.js?v=4.43.0"></script>
   <script src="v50-media-efficiency.js?v=5.0.0"></script>
-  <script src="v51-noir-premium.js?v=5.1.3"></script>
+  <script src="v51-noir-premium.js?v=5.1.4"></script>
   <script>boot();</script>
 </body>
 </html>
