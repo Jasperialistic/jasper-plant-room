@@ -9,17 +9,17 @@
       <stop offset="1" stop-color="#C9B18A" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="hglowG">
-      <stop offset="0" stop-color="#2E5A41" stop-opacity=".22"/>
-      <stop offset="1" stop-color="#2E5A41" stop-opacity="0"/>
+      <stop offset="0" stop-color="#7E6F55" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#7E6F55" stop-opacity="0"/>
     </radialGradient>
 
     <!-- ONE Anthurium crystallinum: full venation anatomy, multi-tone -->
     <g id="cryst">
       <path d="M0 -320 C 30 -260 78 -196 102 -128 C 118 -78 112 -18 84 22 C 66 44 42 44 22 26 C 14 20 8 18 0 24 C -8 18 -14 20 -22 26 C -42 44 -66 44 -84 22 C -112 -18 -118 -78 -102 -128 C -78 -196 -30 -260 0 -320 Z" fill="url(#lf)" stroke="#E7D6B4" stroke-opacity=".26" stroke-width=".8"/>
       <!-- collective vein (submarginal loop), silver-green -->
-      <path d="M14 -292 C 50 -242 82 -192 94 -134 C 102 -98 100 -52 88 -16 C 84 -4 78 8 70 18" stroke="#A8C0AE" stroke-opacity=".3" stroke-width=".85" fill="none"/>
-      <path d="M-14 -292 C -50 -242 -82 -192 -94 -134 C -102 -98 -100 -52 -88 -16 C -84 -4 -78 8 -70 18" stroke="#A8C0AE" stroke-opacity=".3" stroke-width=".85" fill="none"/>
-      <path d="M-14 -292 C -6 -300 6 -300 14 -292" stroke="#A8C0AE" stroke-opacity=".24" stroke-width=".75" fill="none"/>
+      <path d="M14 -292 C 50 -242 82 -192 94 -134 C 102 -98 100 -52 88 -16 C 84 -4 78 8 70 18" stroke="#C6B492" stroke-opacity=".3" stroke-width=".85" fill="none"/>
+      <path d="M-14 -292 C -50 -242 -82 -192 -94 -134 C -102 -98 -100 -52 -88 -16 C -84 -4 -78 8 -70 18" stroke="#C6B492" stroke-opacity=".3" stroke-width=".85" fill="none"/>
+      <path d="M-14 -292 C -6 -300 6 -300 14 -292" stroke="#C6B492" stroke-opacity=".24" stroke-width=".75" fill="none"/>
       <!-- primary lateral veins, warm gold -->
       <path d="M0 -262 C 26 -240 58 -206 78 -162 M0 -212 C 30 -188 66 -150 88 -102 M0 -158 C 30 -136 62 -100 80 -56 M0 -106 C 24 -88 50 -60 64 -26 M0 -62 C 16 -50 32 -32 42 -12" stroke="#C9B18A" stroke-opacity=".3" stroke-width=".66" fill="none"/>
       <path d="M0 -262 C -26 -240 -58 -206 -78 -162 M0 -212 C -30 -188 -66 -150 -88 -102 M0 -158 C -30 -136 -62 -100 -80 -56 M0 -106 C -24 -88 -50 -60 -64 -26 M0 -62 C -16 -50 -32 -32 -42 -12" stroke="#C9B18A" stroke-opacity=".3" stroke-width=".66" fill="none"/>

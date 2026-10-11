@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Plant Room" />
 <meta name="color-scheme" content="dark" />
 <!-- /PWA app shell -->
-  <title>Jasper's Plant Room</title>
+  <title>Guren's Garden</title>
   <!-- Cloud build v3.7: ChatGPT visual evidence bridge -->
   <style>
 
@@ -61,7 +61,7 @@ button,input,select,textarea{font:inherit}.topbar{position:sticky;top:0;z-index:
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark">J</div>
-      <div><strong>Jasper's Plant Room</strong><span id="brandSubtitle">collection · gallery · growth journal</span></div>
+      <div><strong>Guren's Garden</strong><span id="brandSubtitle">collection · growth · care</span></div>
     </div>
     <div class="top-actions">
       <span id="cloudStatus" class="cloud-pill">Loading…</span>
@@ -75,9 +75,9 @@ button,input,select,textarea{font:inherit}.topbar{position:sticky;top:0;z-index:
   <main class="shell">
     <section class="hero">
       <div>
-        <div class="eyebrow" id="heroEyebrow">JASPER'S COLLECTION</div>
-        <h1 id="heroTitle">A living archive of the plant room.</h1>
-        <p id="heroText">Browse the collection, plant portraits and growth timelines. Owner mode adds cloud-synced care tracking and editing across phone and PC.</p>
+        <div class="eyebrow" id="heroEyebrow"></div>
+        <h1 id="heroTitle">Guren's Garden</h1>
+        <p id="heroText">Good things come to those who wait.</p>
       </div>
       <div class="today-card">
         <span>Today</span><strong id="todayText"></strong><small id="snapshotText"></small>
@@ -1715,7 +1715,7 @@ function setOwnerUI(){
  $('#adminLoginBtn').style.display=isOwner?'none':'';
  $('#brandSubtitle').textContent=isOwner?'owner mode · cloud synced':'collection · gallery · growth journal';
  $('#heroEyebrow').textContent=isOwner?'SMART CHECKLIST':'JASPER\'S COLLECTION';
- $('#heroTitle').textContent=isOwner?'Check the plant, not the calendar.':'A living archive of the plant room.';
+ $('#heroTitle').textContent='Guren\'s Garden';
  $('#heroText').innerHTML=isOwner?'The schedule only tells you <em>when to inspect</em>. Moisture, pot weight, reservoir level and the actual plant decide what happens next.':'Browse the collection, plant portraits and growth timelines. Growth Progress records how each plant changes over time.';
  $('#priorityEyebrow').textContent=isOwner?'PRIORITY':'COLLECTION';
  $('#priorityTitle').textContent=isOwner?'Check queue':'Collection highlights';
@@ -1840,7 +1840,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v44-add-plant-presets-light.js?v=4.4.1"></script>
   <script src="v45-location-light-link.js?v=4.5.2"></script>
   <script src="v46-pwa-shell.js?v=4.6.0"></script>
-  <script src="v47-mobile-navigation.js?v=4.43.0"></script>
+  <script src="v47-mobile-navigation.js?v=4.43.2"></script>
   <script src="v26-photo-fit.js?v=2.6.0"></script>
   <script src="v27-permanent-delete.js?v=2.7.0"></script>
   <script src="v28-chatgpt-share.js?v=2.9.0"></script>
@@ -1855,7 +1855,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v48-kemuri.js?v=4.43.0"></script>
   <script src="v49-organic-experience.js?v=4.43.0"></script>
   <script src="v50-media-efficiency.js?v=5.0.0"></script>
-  <script src="v51-noir-premium.js?v=5.1.1"></script>
+  <script src="v51-noir-premium.js?v=5.1.2"></script>
   <script>boot();</script>
 </body>
 </html>

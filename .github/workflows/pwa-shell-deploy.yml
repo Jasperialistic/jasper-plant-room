@@ -78,7 +78,7 @@ jobs:
               if inserted == 0:
                   raise SystemExit('Could not place v46 PWA shell after v45')
 
-          nav_tag = '<script src="v47-mobile-navigation.js?v=4.43.0"></script>'
+          nav_tag = '<script src="v47-mobile-navigation.js?v=4.43.2"></script>'
           nav_pattern = r'<script src="v47-mobile-navigation\.js(?:\?v=[^"\']*)?"></script>'
           if re.search(nav_pattern, s):
               s = re.sub(nav_pattern, nav_tag, s, count=1)
