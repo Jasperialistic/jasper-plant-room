@@ -15,7 +15,7 @@
     const link=document.createElement('link');
     link.id='v51NoirFonts';
     link.rel='stylesheet';
-    url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Inter:wght@400;500;600;700;800&family=Parisienne&display=swap')
+    link.href='https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Inter:wght@400;500;600;700;800&family=Parisienne&display=swap';
     document.head.appendChild(link);
   }
 
