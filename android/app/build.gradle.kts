@@ -48,6 +48,15 @@ android {
 }
 
 dependencies {
+    // Align Kotlin stdlib with the toolchain's 2.2.x compiler (supabase/ktor pin 2.3.21);
+    // newer stdlib artifacts carry metadata the pinned compiler cannot read.
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.3.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.3.21")
+        }
+    }
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
@@ -64,6 +73,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.6.0")
     implementation("io.github.jan-tennert.supabase:storage-kt:3.6.0")
     implementation("io.ktor:ktor-client-okhttp:3.4.3")
+    implementation("io.coil-kt.coil3:coil-compose:3.6.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
