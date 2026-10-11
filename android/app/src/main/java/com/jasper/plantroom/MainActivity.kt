@@ -113,6 +113,7 @@ private sealed interface ScreenState {
         val zones: List<GrowZone>,
         val galleryCount: Int,
         val growthCount: Int,
+        val growthLatest: String?,
     ) : ScreenState
     data object SignIn : ScreenState
     data class Failed(val message: String) : ScreenState
@@ -145,6 +146,7 @@ fun PlantRoomApp() {
                 ScreenState.Collection(
                     plants, PlantRepository.isAuthenticated, covers, careLog, zones,
                     photos.count { it.kind == "gallery" }, photos.count { it.kind == "growth" },
+                    photos.filter { it.kind == "growth" }.mapNotNull { it.photoDate }.maxOrNull(),
                 )
             } catch (error: Exception) {
                 ScreenState.Failed(error.message ?: "Unknown error")
@@ -176,6 +178,7 @@ fun PlantRoomApp() {
             zones = current.zones,
             galleryCount = current.galleryCount,
             growthCount = current.growthCount,
+            growthLatest = current.growthLatest,
             owner = current.owner,
             onOpenPlant = { openPlantId = it },
             onOwnerSignIn = { state = ScreenState.SignIn },
@@ -190,6 +193,22 @@ private fun FullText(text: String) {
     Box(Modifier.fillMaxSize().background(NoirColors.Noir), contentAlignment = Alignment.Center) {
         Text(text, color = NoirColors.Muted, style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+/** web renderGrowthUpdateAge() (v47:870): "Last growth update · Today/Yesterday/N days ago". */
+private fun growthAgeText(latest: String?): String {
+    if (latest.isNullOrBlank()) return "No growth photos yet"
+    val days = runCatching {
+        java.time.temporal.ChronoUnit.DAYS.between(
+            java.time.LocalDate.parse(latest.take(10)), LocalDate.now()
+        )
+    }.getOrDefault(0L).coerceAtLeast(0)
+    val age = when (days) {
+        0L -> "Today"
+        1L -> "Yesterday"
+        else -> "$days days ago"
+    }
+    return "Last growth update · $age"
 }
 
 /** web saveCustomLog(): "Checked — still moist" -> next check +1 day. */
@@ -207,6 +226,7 @@ private fun ShellScreen(
     zones: List<GrowZone>,
     galleryCount: Int,
     growthCount: Int,
+    growthLatest: String?,
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
     onOwnerSignIn: () -> Unit,
@@ -219,6 +239,7 @@ private fun ShellScreen(
     var showMore by remember { mutableStateOf(false) }
     var pickGrowth by remember { mutableStateOf(false) }
     var pickCare by remember { mutableStateOf(false) }
+    var speciesFilter by rememberSaveable { mutableStateOf("") }
     var growthPlant by remember { mutableStateOf<Plant?>(null) }
     var carePlant by remember { mutableStateOf<Plant?>(null) }
     val scope = rememberCoroutineScope()
@@ -294,6 +315,7 @@ private fun ShellScreen(
                         "Guren's Garden",
                         fontSize = 33.sp, fontWeight = FontWeight.Medium,
                         style = TextStyle(
+                            fontFamily = com.jasper.plantroom.ui.theme.PrBodoni,
                             brush = Brush.linearGradient(
                                 listOf(NoirColors.ChampagneHi, NoirColors.Ivory, NoirColors.Champagne)
                             )
@@ -319,20 +341,22 @@ private fun ShellScreen(
                 Spacer(Modifier.height(3.dp))
                 Text(
                     LocalDate.now().format(DateTimeFormatter.ofPattern("EEE, d MMM")),
-                    color = NoirColors.Ivory, fontSize = 13.5.sp
+                    color = NoirColors.Ivory,
+                    fontFamily = com.jasper.plantroom.ui.theme.PrBodoni,
+                    fontSize = 13.5.sp
                 )
-                Text("Collection snapshot: Aug 18, 2026", color = NoirColors.Muted, fontSize = 9.5.sp)
+                Text(growthAgeText(growthLatest), color = NoirColors.Muted, fontSize = 9.5.sp)
             }
         }
         }
 
         when (current) {
-            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, Modifier.weight(1f))
-            Tab.Plants -> PlantsView(plants, covers, owner, onOpenPlant, Modifier.weight(1f))
+            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, onSpecies = { speciesFilter = it; tab = Tab.Plants.name }, onCustomCare = { carePlant = it }, modifier = Modifier.weight(1f))
+            Tab.Plants -> PlantsView(plants, covers, owner, speciesFilter, { speciesFilter = "" }, onOpenPlant, Modifier.weight(1f))
             Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
             Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
             Tab.Profile -> ProfileView(Modifier.weight(1f))
-            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, Modifier.weight(1f))
+            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, onSpecies = { speciesFilter = it; tab = Tab.Plants.name }, onCustomCare = { carePlant = it }, modifier = Modifier.weight(1f))
         }
 
             // web #mobileAppNav: bottom app bar
@@ -407,6 +431,8 @@ private fun DashboardView(
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
     onQuickCare: (Plant, String, String?) -> Unit = { _, _, _ -> },
+    onSpecies: (String) -> Unit = {},
+    onCustomCare: (Plant) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var showAll by remember { mutableStateOf(false) }
@@ -453,12 +479,19 @@ private fun DashboardView(
                 }
             }
         }
+        // web #v414SpeciesStats: collection by plant group (tap = Plants filtered)
+        item {
+            com.jasper.plantroom.ui.SpeciesStrip(plants, onSpecies)
+        }
         // section-head: COLLECTION / Collection highlights / Show all plants
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text("COLLECTION", color = NoirColors.Champagne, fontSize = 9.5.sp, letterSpacing = 1.6.sp)
-                    Text("Collection highlights", color = NoirColors.Ivory, fontSize = 18.sp)
+                    Text(
+                        "Collection highlights", color = NoirColors.Ivory, fontSize = 18.sp,
+                        fontFamily = com.jasper.plantroom.ui.theme.PrBodoni,
+                    )
                 }
                 OutlinedButton(onClick = { showAll = true }) { Text("SHOW ALL PLANTS", fontSize = 10.5.sp, letterSpacing = 1.sp) }
             }
@@ -471,6 +504,8 @@ private fun DashboardView(
                 plant, covers[plant.id], owner,
                 onMoist = { onQuickCare(plant, "Checked — still moist", moistNext()) },
                 onWatered = { onQuickCare(plant, "Watered", wateredNext(plant)) },
+                onReservoir = { onQuickCare(plant, "Reservoir topped up", null) },
+                onCustom = { onCustomCare(plant) },
             ) { onOpenPlant(plant.id) }
         }
         // owner: RECENT / Latest care
@@ -478,7 +513,10 @@ private fun DashboardView(
             item {
                 Column(Modifier.padding(top = 8.dp)) {
                     Text("RECENT", color = NoirColors.Champagne, fontSize = 9.5.sp, letterSpacing = 1.6.sp)
-                    Text("Latest care", color = NoirColors.Ivory, fontSize = 18.sp)
+                    Text(
+                        "Latest care", color = NoirColors.Ivory, fontSize = 18.sp,
+                        fontFamily = com.jasper.plantroom.ui.theme.PrBodoni,
+                    )
                 }
             }
             items(careLog.take(10), key = { "c-${it.id ?: it.careDate}" }) { entry ->
@@ -504,6 +542,8 @@ private fun PlantsView(
     plants: List<Plant>,
     covers: Map<String, String?>,
     owner: Boolean,
+    species: String,
+    onClearSpecies: () -> Unit,
     onOpenPlant: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -525,6 +565,7 @@ private fun PlantsView(
         if (query.isNotBlank() && !hay.contains(query.lowercase())) return@filter false
         if (group.isNotBlank() && plant.group != group) return@filter false
         if (location.isNotBlank() && plant.location != location) return@filter false
+        if (species.isNotEmpty() && com.jasper.plantroom.ui.speciesOf(plant) != species) return@filter false
         val st = PlantRules.statusOf(plant)
         when (statusFilter) {
             "Due / overdue" -> if (st !in setOf("today", "overdue")) return@filter false
@@ -557,6 +598,7 @@ private fun PlantsView(
                     Spacer(Modifier.height(8.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterSelect("All groups", groups.map { if (it.isEmpty()) "All groups" else it }, if (group.isEmpty()) "All groups" else group) {
+                            onClearSpecies()
                             group = if (it == "All groups") "" else it
                         }
                         FilterSelect("All locations", locations.map { if (it.isEmpty()) "All locations" else it }, if (location.isEmpty()) "All locations" else location) {

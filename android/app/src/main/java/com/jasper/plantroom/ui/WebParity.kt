@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.jasper.plantroom.net.Plant
 import com.jasper.plantroom.ui.theme.NoirColors
+import com.jasper.plantroom.ui.theme.PrBodoni
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -81,7 +82,7 @@ fun StatTile(label: String, value: String, tint: Color = NoirColors.Ivory, modif
             maxLines = 2, overflow = TextOverflow.Ellipsis
         )
         Spacer(Modifier.height(7.dp))
-        Text(value, color = tint, fontWeight = FontWeight.SemiBold, fontSize = 31.sp)
+        Text(value, color = tint, fontFamily = PrBodoni, fontWeight = FontWeight.Medium, fontSize = 31.sp)
     }
 }
 
@@ -134,7 +135,7 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            plant.name, color = NoirColors.Ivory, fontWeight = FontWeight.Medium,
+                            plant.name, color = NoirColors.Ivory, fontFamily = PrBodoni, fontWeight = FontWeight.Medium,
                             fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                         Text(
@@ -191,6 +192,8 @@ fun QueueRow(
     owner: Boolean,
     onMoist: () -> Unit = {},
     onWatered: () -> Unit = {},
+    onReservoir: () -> Unit = {},
+    onCustom: () -> Unit = {},
     onClick: () -> Unit,
 ) {
     val status = PlantRules.statusOf(plant)
@@ -215,7 +218,7 @@ fun QueueRow(
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(plant.name, color = NoirColors.Ivory, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(plant.name, color = NoirColors.Ivory, fontFamily = PrBodoni, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 if (owner) "${plant.location ?: "Plant room"}" +
                     (plant.nextCheck?.let { " · check ${PlantRules.prettyDate(it)}" } ?: "")
@@ -225,8 +228,18 @@ fun QueueRow(
             if (owner) {
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    QuickCareButton("Still moist", onMoist)
+                    QuickCareButton("Moist", onMoist)
                     QuickCareButton("Watered", onWatered)
+                    QuickCareButton("Reservoir", onReservoir)
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(NoirColors.CardBottom)
+                            .clickable(onClick = onCustom)
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text("＋", color = NoirColors.Champagne, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -260,6 +273,56 @@ fun CareLogRow(date: String, plant: String, action: String, details: String, loc
             val second = listOf(details, location).filter { it.isNotBlank() }.joinToString(" · ")
             if (second.isNotBlank()) {
                 Text(second, color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** web speciesOf() (v47:827). */
+fun speciesOf(plant: Plant): String {
+    val g = (plant.group ?: "").trim().lowercase()
+    return when {
+        g.contains("anthurium") -> "anthurium"
+        g.contains("alocasia") -> "alocasia"
+        g.contains("philodendron") -> "philodendron"
+        else -> "other"
+    }
+}
+
+/** web #v414SpeciesStats: counts by plant group, tap opens Plants filtered. */
+@Composable
+fun SpeciesStrip(plants: List<Plant>, onSpecies: (String) -> Unit) {
+    val counts = mapOf(
+        "anthurium" to plants.count { speciesOf(it) == "anthurium" },
+        "alocasia" to plants.count { speciesOf(it) == "alocasia" },
+        "philodendron" to plants.count { speciesOf(it) == "philodendron" },
+        "other" to plants.count { speciesOf(it) == "other" },
+    )
+    val labels = mapOf("anthurium" to "Anthurium", "alocasia" to "Alocasia", "philodendron" to "Philodendron", "other" to "Others")
+    val accents = mapOf(
+        "anthurium" to Color(0xFFD8C49A), "alocasia" to Color(0xFFA8CDB9),
+        "philodendron" to Color(0xFFB6C9A4), "other" to NoirColors.Muted,
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.fillMaxWidth()) {
+        listOf("anthurium", "alocasia", "philodendron", "other").forEach { key ->
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Brush.verticalGradient(listOf(NoirColors.CardTop, NoirColors.CardBottom)))
+                    .clickable { onSpecies(key) }
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    counts[key].toString(), color = accents[key] ?: NoirColors.Ivory,
+                    fontFamily = PrBodoni, fontWeight = FontWeight.Medium, fontSize = 21.sp,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    labels[key] ?: "", color = NoirColors.Muted, fontSize = 9.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
