@@ -7,13 +7,15 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.jasper.plantroom.R
 
 // Noir Édition tokens — mirrors docs/design/premium-direction.md (owner-accepted,
-// frozen). Display serif stands in for Bodoni Moda until the licensed family is
-// bundled; UI type is the platform sans (Inter on web).
+// frozen). Typography now bundles the web's OFL families: Bodoni Moda display,
+// Inter UI, Parisienne quote.
 object NoirColors {
     val Noir = Color(0xFF080808)
     val Espresso = Color(0xFF1C1915)
@@ -25,6 +27,11 @@ object NoirColors {
     val ChampagneHi = Color(0xFFE7D6B4)
     val OnChampagne = Color(0xFF171108)
 }
+
+/** Web typography: Bodoni Moda display × Inter UI × Parisienne quote (bundled OFL fonts). */
+val PrBodoni = FontFamily(Font(R.font.pr_bodoni))
+val PrInter = FontFamily(Font(R.font.pr_inter))
+val PrParisienne = FontFamily(Font(R.font.pr_parisienne))
 
 private val NoirScheme = darkColorScheme(
     primary = NoirColors.Champagne,
@@ -44,14 +51,14 @@ private val NoirScheme = darkColorScheme(
 )
 
 private val NoirType = Typography(
-    displayLarge = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 48.sp, letterSpacing = 0.sp),
-    headlineMedium = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 26.sp),
-    titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 20.sp),
-    titleMedium = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 17.sp),
-    labelLarge = TextStyle(fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 0.16.sp),
-    labelMedium = TextStyle(fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.22.sp),
-    bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
-    bodyMedium = TextStyle(fontSize = 13.sp, lineHeight = 19.sp),
+    displayLarge = TextStyle(fontFamily = PrBodoni, fontWeight = FontWeight.Medium, fontSize = 48.sp, letterSpacing = 0.sp),
+    headlineMedium = TextStyle(fontFamily = PrBodoni, fontWeight = FontWeight.Medium, fontSize = 26.sp),
+    titleLarge = TextStyle(fontFamily = PrBodoni, fontWeight = FontWeight.Medium, fontSize = 20.sp),
+    titleMedium = TextStyle(fontFamily = PrBodoni, fontWeight = FontWeight.Medium, fontSize = 17.sp),
+    labelLarge = TextStyle(fontFamily = PrInter, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 0.16.sp),
+    labelMedium = TextStyle(fontFamily = PrInter, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.22.sp),
+    bodyLarge = TextStyle(fontFamily = PrInter, fontSize = 15.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontFamily = PrInter, fontSize = 13.sp, lineHeight = 19.sp),
 )
 
 @Composable

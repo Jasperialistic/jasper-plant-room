@@ -178,7 +178,14 @@ fun PlantPhotoCard(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () 
  * visitor: "group · location"), status chip for owner.
  */
 @Composable
-fun QueueRow(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () -> Unit) {
+fun QueueRow(
+    plant: Plant,
+    photoUrl: String?,
+    owner: Boolean,
+    onMoist: () -> Unit = {},
+    onWatered: () -> Unit = {},
+    onClick: () -> Unit,
+) {
     val status = PlantRules.statusOf(plant)
     Row(
         Modifier
@@ -208,6 +215,13 @@ fun QueueRow(plant: Plant, photoUrl: String?, owner: Boolean, onClick: () -> Uni
                 else listOfNotNull(plant.group, plant.location).joinToString(" · ").ifBlank { "Plant" },
                 color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+            if (owner) {
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QuickCareButton("Still moist", onMoist)
+                    QuickCareButton("Watered", onWatered)
+                }
+            }
         }
         if (owner) {
             Spacer(Modifier.width(8.dp))
@@ -241,6 +255,20 @@ fun CareLogRow(date: String, plant: String, action: String, details: String, loc
                 Text(second, color = NoirColors.Muted, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+}
+
+/** Owner dashboard quick care (web addCare actions). */
+@Composable
+private fun QuickCareButton(text: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(Brush.verticalGradient(listOf(NoirColors.Champagne, NoirColors.ChampagneHi)))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 11.dp, vertical = 5.dp)
+    ) {
+        Text(text, color = NoirColors.OnChampagne, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

@@ -3,6 +3,7 @@ package com.jasper.plantroom
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -48,6 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -177,6 +180,13 @@ private fun FullText(text: String) {
     }
 }
 
+/** web saveCustomLog(): "Checked — still moist" -> next check +1 day. */
+private fun moistNext(): String = LocalDate.now().plusDays(1).toString()
+
+/** web saveCustomLog(): "Watered" -> next check + checkDays (null without). */
+private fun wateredNext(plant: Plant): String? =
+    plant.checkDays?.let { LocalDate.now().plusDays(it.toLong()).toString() }
+
 @Composable
 private fun ShellScreen(
     plants: List<Plant>,
@@ -193,6 +203,23 @@ private fun ShellScreen(
     var tab by rememberSaveable { mutableStateOf(Tab.Dashboard.name) }
     val current = Tab.valueOf(tab)
     var showAddPlant by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val appCtx = androidx.compose.ui.platform.LocalContext.current
+
+    // web addCare(): care_log insert + plants update, then refresh
+    val quickCare: (Plant, String, String?) -> Unit = { plant, action, next ->
+        scope.launch {
+            val result = runCatching { PlantRepository.logCare(plant, action, "", next) }
+            if (result.isSuccess) {
+                android.util.Log.d("QuickCare", "logged '$action' for ${plant.name} next=$next")
+                android.widget.Toast.makeText(appCtx, "${plant.name}: $action logged", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                android.util.Log.e("QuickCare", "logCare failed for ${plant.name}", result.exceptionOrNull())
+                android.widget.Toast.makeText(appCtx, "Care log failed: ${result.exceptionOrNull()?.message ?: "unknown"}", android.widget.Toast.LENGTH_LONG).show()
+            }
+            onRefresh()
+        }
+    }
 
     if (showAddPlant) {
         com.jasper.plantroom.ui.AddPlantSheet(onDismiss = { saved ->
@@ -201,7 +228,14 @@ private fun ShellScreen(
         })
     }
 
-    Column(Modifier.fillMaxSize().background(NoirColors.Noir)) {
+    Box(Modifier.fillMaxSize().background(NoirColors.Noir)) {
+        // web body::before: hero crystallinum leaf wallpaper at .38 (pre-blurred PNG)
+        Image(
+            painterResource(R.drawable.pr_wallpaper), null,
+            contentScale = ContentScale.Crop, alpha = 0.38f,
+            modifier = Modifier.fillMaxSize()
+        )
+        Column(Modifier.fillMaxSize()) {
         // ── topbar (web .topbar) ──────────────────────────────────────────
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -223,6 +257,12 @@ private fun ShellScreen(
         }
 
         // ── hero (web .hero): copy + today card, above the tabs ───────────
+        Box(Modifier.fillMaxWidth()) {
+        Image(
+            painterResource(R.drawable.pr_header), null,
+            contentScale = ContentScale.Crop, alpha = 0.6f,
+            modifier = Modifier.matchParentSize().clip(RoundedCornerShape(16.dp))
+        )
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -231,8 +271,9 @@ private fun ShellScreen(
                 Text("Guren's Garden", color = NoirColors.Ivory, fontSize = 30.sp)
                 Text(
                     "Plants train patience. Good things come to those who wait.",
-                    color = NoirColors.Champagne, fontSize = 14.sp,
-                    fontStyle = FontStyle.Italic, modifier = Modifier.padding(top = 4.dp)
+                    color = NoirColors.Champagne, fontSize = 15.sp,
+                    fontFamily = com.jasper.plantroom.ui.theme.PrParisienne,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
             Spacer(Modifier.width(12.dp))
@@ -251,6 +292,7 @@ private fun ShellScreen(
                 )
                 Text("Collection snapshot: Aug 18, 2026", color = NoirColors.Muted, fontSize = 9.5.sp)
             }
+        }
         }
 
         // ── tabs (web .tabs) ─────────────────────────────────────────────
@@ -290,12 +332,13 @@ private fun ShellScreen(
         }
 
         when (current) {
-            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, Modifier.weight(1f))
+            Tab.Dashboard -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, Modifier.weight(1f))
             Tab.Plants -> PlantsView(plants, covers, owner, onOpenPlant, Modifier.weight(1f))
             Tab.CareLog -> CareLogView(careLog, Modifier.weight(1f))
             Tab.Locations -> ZonesView(zones, plants, Modifier.weight(1f))
             Tab.Profile -> ProfileView(Modifier.weight(1f))
-            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, Modifier.weight(1f))
+            Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, Modifier.weight(1f))
+        }
         }
     }
 }
@@ -310,6 +353,7 @@ private fun DashboardView(
     growthCount: Int,
     owner: Boolean,
     onOpenPlant: (String) -> Unit,
+    onQuickCare: (Plant, String, String?) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     var showAll by remember { mutableStateOf(false) }
@@ -361,7 +405,11 @@ private fun DashboardView(
             item { EmptyState("Nothing currently has a dated check.") }
         }
         items(queue, key = { "q-${it.id}" }) { plant ->
-            QueueRow(plant, covers[plant.id], owner) { onOpenPlant(plant.id) }
+            QueueRow(
+                plant, covers[plant.id], owner,
+                onMoist = { onQuickCare(plant, "Checked — still moist", moistNext()) },
+                onWatered = { onQuickCare(plant, "Watered", wateredNext(plant)) },
+            ) { onOpenPlant(plant.id) }
         }
         // owner: RECENT / Latest care
         if (owner && careLog.isNotEmpty()) {
@@ -414,7 +462,7 @@ private fun PlantsView(
         if (location.isNotBlank() && plant.location != location) return@filter false
         val st = PlantRules.statusOf(plant)
         when (statusFilter) {
-            "Due" -> if (st !in setOf("today", "overdue")) return@filter false
+            "Due / overdue" -> if (st !in setOf("today", "overdue")) return@filter false
             "Upcoming" -> if (st != "upcoming") return@filter false
             "Reservoir" -> if (st != "reservoir") return@filter false
         }
@@ -422,7 +470,12 @@ private fun PlantsView(
     }
 
     BoxWithConstraints(modifier) {
-        val columns = if (maxWidth >= 840.dp) 2 else 1
+        // web .plant-grid breakpoints: 3 cols desktop, 2 at <=900px, 1 at <=620px
+        val columns = when {
+            maxWidth >= 900.dp -> 3
+            maxWidth >= 620.dp -> 2
+            else -> 1
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
@@ -433,7 +486,7 @@ private fun PlantsView(
                 Column {
                     OutlinedTextField(
                         value = query, onValueChange = { query = it },
-                        label = { Text("Search name, group, zone") },
+                        placeholder = { Text("Search plant, shelf, medium…") },
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
@@ -445,8 +498,12 @@ private fun PlantsView(
                             location = if (it == "All locations") "" else it
                         }
                         if (owner) {
-                            FilterSelect("All", listOf("All", "Due", "Upcoming", "Reservoir"), statusFilter.ifBlank { "All" }) {
-                                statusFilter = if (it == "All") "" else it
+                            FilterSelect(
+                                "All statuses",
+                                listOf("All statuses", "Due / overdue", "Upcoming", "Reservoir"),
+                                statusFilter.ifBlank { "All statuses" }
+                            ) {
+                                statusFilter = if (it == "All statuses") "" else it
                             }
                         }
                     }

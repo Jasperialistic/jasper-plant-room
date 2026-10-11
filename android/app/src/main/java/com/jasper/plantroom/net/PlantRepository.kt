@@ -133,6 +133,42 @@ object PlantRepository {
 
     suspend fun signOut() = client.auth.signOut()
 
+    /**
+     * Quick care from the dashboard, mirrored VERBATIM from the web addCare()
+     * (index.html:1797) + saveCustomLog() date rules (index.html:1801):
+     * care_log insert {user_id, plant_id, care_date, plant_name, action, details,
+     * location}; plants update {last_care, last_action, next_check}. "Watered"
+     * schedules next_check = today + checkDays; "Checked — still moist" = +1 day.
+     */
+    suspend fun logCare(plant: Plant, action: String, details: String = "", nextCheck: String?) {
+        val userId = client.auth.currentUserOrNull()?.id ?: error("Not signed in")
+        val today = java.time.LocalDate.now().toString()
+        val jp = { s: String -> kotlinx.serialization.json.JsonPrimitive(s) }
+        client.postgrest["care_log"].insert(
+            kotlinx.serialization.json.buildJsonObject {
+                put("user_id", jp(userId))
+                put("plant_id", jp(plant.id))
+                put("care_date", jp(today))
+                put("plant_name", jp(plant.name))
+                put("action", jp(action))
+                put("details", jp(details))
+                put(
+                    "location",
+                    plant.location?.let { jp(it) } ?: kotlinx.serialization.json.JsonNull
+                )
+            }
+        )
+        client.postgrest["plants"].update(
+            kotlinx.serialization.json.buildJsonObject {
+                put("last_care", jp(today))
+                put("last_action", jp(action))
+                if (nextCheck != null) put("next_check", jp(nextCheck)) else put("next_check", kotlinx.serialization.json.JsonNull)
+            }
+        ) {
+            filter { eq("id", plant.id) }
+        }
+    }
+
     suspend fun loadPlants(): List<Plant> =
         client.postgrest["plants"].select().decodeList<Plant>()
 

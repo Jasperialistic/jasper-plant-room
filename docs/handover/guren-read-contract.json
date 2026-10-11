@@ -1,0 +1,66 @@
+{
+  "contract": "guren-read-contract",
+  "version": 1,
+  "status": "QUEUED_NOT_STARTED",
+  "authority": {
+    "supabase_project_ref": "vslyrabiqgbgbcqgooxb",
+    "rest_base": "https://vslyrabiqgbgbcqgooxb.supabase.co/rest/v1/",
+    "auth": "anon publishable key (RLS enforced); never service-role"
+  },
+  "tables": {
+    "plants": {
+      "access": "public_read",
+      "fields": {
+        "id": "uuid", "name": "text", "plant_group": "text?", "location": "text?",
+        "light": "text?", "environment": "text?", "pot": "text?", "pot_type": "text?",
+        "outer_pot": "text?", "medium": "text?", "watering_mode": "text?",
+        "last_care": "date?", "last_action": "text?", "next_check": "date?",
+        "check_days": "int?", "check_rule": "text?", "notes": "text?", "confidence": "text?"
+      }
+    },
+    "care_log": {
+      "access": "owner_read_write (anon DENIED: 42501)",
+      "fields": {
+        "id": "uuid", "user_id": "uuid", "plant_id": "uuid", "care_date": "date",
+        "plant_name": "text?", "action": "text?", "details": "text?", "location": "text?"
+      }
+    },
+    "plant_photos": {
+      "access": "public_read",
+      "fields": {
+        "id": "uuid", "plant_id": "uuid", "kind": "growth|gallery",
+        "storage_path": "text?", "thumbnail_path": "text?", "photo_date": "date?",
+        "note": "text?", "sort_order": "int?", "is_thumbnail": "bool?"
+      }
+    },
+    "plant_base_photos": {
+      "access": "public_read",
+      "fields": {
+        "id": "uuid", "plant_id": "uuid", "asset_path": "text?", "sort_order": "int?",
+        "is_thumbnail": "bool?", "photo_date": "date?", "hidden": "bool?", "purged": "bool?"
+      }
+    },
+    "grow_zones": {
+      "access": "public_read",
+      "fields": {
+        "id": "uuid", "name": "text", "details": "text?", "humidity": "text?",
+        "par": "text?", "grow_lights": "text?", "notes": "text?",
+        "photo_asset_path": "text?", "icon": "text?", "sort_order": "int?"
+      }
+    }
+  },
+  "rules": {
+    "isReservoir": "watering_mode contains 'reservoir' (case-insensitive)",
+    "statusOf": "reservoir | none (no next_check) | overdue (next_check<today) | today | upcoming",
+    "statusLabels": { "overdue": "Overdue", "today": "Check today", "reservoir": "Reservoir", "upcoming": "Upcoming" },
+    "careWrite": "insert care_log {user_id, plant_id, care_date=today, plant_name, action, details, location}; update plants {last_care=today, last_action=action, next_check}",
+    "scheduling": { "Watered": "today + check_days", "Checked — still moist": "today + 1 day" }
+  },
+  "storage": {
+    "bucket": "plant-media",
+    "original": "/storage/v1/object/public/plant-media/<uid>/<plant-id>/photo-<ts>.jpg",
+    "thumbnail": "/storage/v1/object/public/plant-media/<uid>/<plant-id>/thumbs/photo-<ts>.jpg",
+    "listSurfacesUseThumbsOnly": true
+  },
+  "breakingChangePolicy": "field renames or rule changes require version bump + owner approval"
+}

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,8 +67,10 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
         }
     }
 
+    BoxWithConstraints(Modifier.fillMaxSize().background(NoirColors.Noir), contentAlignment = Alignment.Center) {
+    val wide = maxWidth >= 840.dp // Fold8 unfolded inner screen
     LazyColumn(
-        Modifier.fillMaxSize().background(NoirColors.Noir),
+        Modifier.fillMaxWidth().then(if (wide) Modifier.widthIn(max = 1180.dp) else Modifier),
         contentPadding = PaddingValues(bottom = 32.dp),
     ) {
         item {
@@ -140,6 +144,42 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                     .sortedWith(compareBy({ it.sortOrder ?: 0 }, { it.assetPath ?: "" }))
 
                 item {
+                    if (wide) {
+                        // two-page spread: photo card left, identity + details right
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp)) {
+                            if (cover != null) {
+                                AsyncImage(
+                                    model = cover,
+                                    contentDescription = plant.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.width(440.dp).height(320.dp).clip(RoundedCornerShape(18.dp)),
+                                )
+                            } else {
+                                Box(Modifier.width(440.dp).height(320.dp).clip(RoundedCornerShape(18.dp)).background(NoirColors.CardBottom), contentAlignment = Alignment.Center) {
+                                    Text("No photograph yet", color = NoirColors.Muted, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                            Spacer(Modifier.width(28.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(plant.name, style = MaterialTheme.typography.headlineMedium, color = NoirColors.Ivory)
+                                Text(
+                                    listOfNotNull(plant.group, plant.location).joinToString(" · ").ifBlank { "Specimen" },
+                                    style = MaterialTheme.typography.labelMedium, color = NoirColors.ChampagneHi,
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                DetailRow("Light", plant.light)
+                                DetailRow("Environment", plant.environment)
+                                DetailRow("Pot", listOfNotNull(plant.pot, plant.potType).joinToString(" · ").ifBlank { null })
+                                DetailRow("Outer pot", plant.outerPot)
+                                DetailRow("Medium", plant.medium)
+                                DetailRow("Watering", plant.wateringMode)
+                                DetailRow("Last care", listOfNotNull(plant.lastCare, plant.lastAction).joinToString(" — ").ifBlank { null })
+                                DetailRow("Next check", plant.nextCheck)
+                                DetailRow("Rule", plant.checkRule)
+                                DetailRow("Notes", plant.notes)
+                            }
+                        }
+                    } else {
                     if (cover != null) {
                         AsyncImage(
                             model = cover,
@@ -159,9 +199,10 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                             style = MaterialTheme.typography.labelMedium, color = NoirColors.ChampagneHi,
                         )
                     }
+                    }
                 }
 
-                item {
+                if (!wide) item {
                     Column(Modifier.padding(horizontal = 20.dp)) {
                         DetailRow("Light", plant.light)
                         DetailRow("Environment", plant.environment)
@@ -227,6 +268,7 @@ fun PlantDetailScreen(plant: Plant, owner: Boolean, onBack: () -> Unit) {
                 }
             }
         }
+    }
     }
 }
 
