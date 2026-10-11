@@ -53,6 +53,22 @@ Every interactive/raised surface is built physically, never flat:
 - Photos: 15–18px radius, deep ambient shadow, subtle top gloss overlay.
 - Chips/pills: champagne tinted glass with rim + inner highlight.
 
+## Headers & background atmosphere
+
+- **Headers are image-wrapped, never bare text on flat color.** Page mastheads
+  and major section headers use real botanical photography (Monstera, Alocasia,
+  Philodendron — the owner's own collection) with dark gradient veils
+  (top-dark → bottom-near-black) plus a warm champagne radial light; serif
+  titles sit over the image with a soft text shadow for legibility.
+- Section banners: ~158px tall, 18px radius, left-weighted veil
+  (`rgba(8,8,8,.88)` → transparent) so titles stay readable at left.
+- **Page background is atmospheric, not flat:** a faint botanical leaf photo
+  layer at ~8.5% opacity (contrast-boosted, slightly desaturated) sits behind
+  all content, with a secondary layer of warm champagne/emerald radial glows and
+  a bottom darkening gradient. No empty developer-grey surfaces anywhere.
+- Photo veils must keep foliage identifiable — never blur or crop away the
+  plant's character.
+
 ## Layout & spacing
 
 - 8px spacing rhythm; section gaps 28–34px; card padding 10/16px.
