@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [media, index, worker] = await Promise.all([
+const [media, index, worker, uploadQueue] = await Promise.all([
   readFile(new URL('../v50-media-efficiency.js', import.meta.url), 'utf8'),
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../service-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../v48-upload-queue.js', import.meta.url), 'utf8'),
 ]);
 
 test('media preparation decodes each photo exactly once', () => {
@@ -38,6 +39,16 @@ test('upload pair keeps the stable two-object contract', () => {
   assert.equal(cacheControls.length, 2);
   // Storage duplicates are retry-safe, never fatal.
   assert.equal((media.match(/already exists\|duplicate/g) || []).length, 2);
+});
+
+test('upload queue functions carry the thumbnail-aware flag so v47 sync cannot clobber them', () => {
+  // v47-mobile-navigation's installUploads() reassigns uploadPhoto/uploadNewPlantPhotos
+  // unless the v441LightweightThumbnails flag is present. The queue must set it,
+  // otherwise global callers silently fall back to the single-photo abort-on-failure path.
+  const queue = uploadQueue;
+  assert.match(queue, /uploadPhoto=uploadPhotoQueued;uploadPhoto\.v442UploadQueue=true;uploadPhoto\.v441LightweightThumbnails=true;/);
+  assert.match(queue, /uploadNewPlantPhotos=uploadNewPlantPhotosQueued;uploadNewPlantPhotos\.v442UploadQueue=true;uploadNewPlantPhotos\.v441LightweightThumbnails=true;/);
+  assert.match(queue, /uploadButton\.dataset\.v441Upload='1'/);
 });
 
 test('v50 is loaded before boot and precached by the service worker', () => {

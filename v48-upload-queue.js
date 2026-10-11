@@ -269,9 +269,9 @@
     if(form&&typeof createNewPlant==='function'){
       form.removeEventListener('submit',createNewPlant);createNewPlant=createNewPlantQueued;form.addEventListener('submit',createNewPlantQueued);
     }
-    uploadNewPlantPhotos=uploadNewPlantPhotosQueued;uploadNewPlantPhotos.v442UploadQueue=true;
-    uploadPhoto=uploadPhotoQueued;uploadPhoto.v442UploadQueue=true;
-    const uploadButton=document.getElementById('uploadPhotoBtn');if(uploadButton)uploadButton.onclick=uploadPhotoQueued;
+    uploadNewPlantPhotos=uploadNewPlantPhotosQueued;uploadNewPlantPhotos.v442UploadQueue=true;uploadNewPlantPhotos.v441LightweightThumbnails=true;
+    uploadPhoto=uploadPhotoQueued;uploadPhoto.v442UploadQueue=true;uploadPhoto.v441LightweightThumbnails=true;
+    const uploadButton=document.getElementById('uploadPhotoBtn');if(uploadButton){uploadButton.dataset.v441Upload='1';uploadButton.onclick=uploadPhotoQueued;}
   }
 
   install();
