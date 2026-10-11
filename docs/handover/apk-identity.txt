@@ -1,0 +1,11 @@
+Plant Room Android v1 DEV candidate (debug-signed)
+Generated: 2026-10-11T07:11:42Z
+Commit: 860c3e3c46dac59119bff99579fd33852cf04b45
+SHA-256: 110954db7002db90b80c63f5070af3062e442c3f938091795a4f46514b2059e3
+Size-Bytes: 49113251
+package: name='com.jasper.plantroom.dev' versionCode='1' versionName='0.1.0-dev' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'
+sdkVersion:'28'
+targetSdkVersion:'37'
+uses-permission: name='android.permission.INTERNET'
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 certificate SHA-256 digest: c522e3dea053eb1fedba2c3044987a59a586fb4c3b6c3f650e63766ff8e2cdaf
