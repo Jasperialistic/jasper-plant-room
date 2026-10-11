@@ -1715,13 +1715,14 @@ async function loadCloud(){
 
 function setOwnerUI(){
  document.body.classList.toggle('owner-mode',isOwner);
- $('#adminLoginBtn').style.display=isOwner?'none':'';
- $('#brandSubtitle').textContent=isOwner?'owner mode · cloud synced':'collection · gallery · growth journal';
- $('#heroEyebrow').textContent=isOwner?'SMART CHECKLIST':'JASPER\'S COLLECTION';
- $('#heroTitle').textContent='Guren\'s Garden';
- $('#heroText').textContent='Plants train patience. Good things come to those who wait.';
- $('#priorityEyebrow').textContent=isOwner?'PRIORITY':'COLLECTION';
- $('#priorityTitle').textContent=isOwner?'Check queue':'Collection highlights';
+ const login=$('#adminLoginBtn');if(login)login.style.display=isOwner?'none':'';
+ const setText=(selector,text)=>{const node=$(selector);if(node)node.textContent=text;};
+ setText('#brandSubtitle',isOwner?'owner mode · cloud synced':'collection · gallery · growth journal');
+ setText('#heroEyebrow',isOwner?'SMART CHECKLIST':'JASPER\'S COLLECTION');
+ setText('#heroTitle','Guren\'s Garden');
+ setText('#heroText','Plants train patience. Good things come to those who wait.');
+ setText('#priorityEyebrow',isOwner?'PRIORITY':'COLLECTION');
+ setText('#priorityTitle',isOwner?'Check queue':'Collection highlights');
  if(!isOwner&&($('#logView').classList.contains('active')||$('#addplantView').classList.contains('active'))) $('[data-view="plants"]').click();
 }
 
@@ -1900,7 +1901,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v49-organic-experience.js?v=4.43.0"></script>
   <script src="v50-media-efficiency.js?v=5.0.0"></script>
   <script src="v51-noir-premium.js?v=5.1.4"></script>
-  <script src="v52-care-recovery.js?v=5.2.1"></script>
+  <script src="v52-care-recovery.js?v=5.2.2"></script>
   <script>boot();</script>
 </body>
 </html>

@@ -37,11 +37,11 @@ test('retry fingerprints are stable and duplicate insert errors are recognized',
 });
 
 test('care recovery loads before boot and is precached in the bumped shell',()=>{
-  const recovery=index.indexOf('v52-care-recovery.js?v=5.2.1');
+  const recovery=index.indexOf('v52-care-recovery.js?v=5.2.2');
   const boot=index.indexOf('<script>boot();</script>');
   assert.ok(recovery>0&&recovery<boot);
-  assert.match(worker,/jasper-plant-room-shell-v5\.2\.1/);
-  assert.match(worker,/v52-care-recovery\.js\?v=5\.2\.1/);
+  assert.match(worker,/jasper-plant-room-shell-v5\.2\.2/);
+  assert.match(worker,/v52-care-recovery\.js\?v=5\.2\.2/);
 });
 
 test('write boundary uses explicit idempotency id, UUID guard, timeouts and UI restoration',()=>{
@@ -52,4 +52,10 @@ test('write boundary uses explicit idempotency id, UUID guard, timeouts and UI r
   assert.match(index,/buttons\.forEach\(item=>item\.disabled=true\)/);
   assert.match(index,/finally\{buttons\.forEach/);
   assert.match(index,/finally\{btn\.disabled=false;btn\.textContent=label;/);
+});
+
+test('owner UI tolerates Noir removing legacy header nodes before boot',()=>{
+  assert.match(index,/const setText=\(selector,text\)=>\{const node=\$\(selector\);if\(node\)node\.textContent=text;\}/);
+  assert.doesNotMatch(index,/\$\('#brandSubtitle'\)\.textContent/);
+  assert.doesNotMatch(index,/\$\('#heroEyebrow'\)\.textContent/);
 });
