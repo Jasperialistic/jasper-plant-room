@@ -66,7 +66,11 @@ import com.jasper.plantroom.ui.Chip
 import com.jasper.plantroom.ui.EmptyState
 import com.jasper.plantroom.ui.PhotoSlide
 import com.jasper.plantroom.ui.PhotoViewer
+import com.jasper.plantroom.ui.BottomNavBar
+import com.jasper.plantroom.ui.MoreSheet
 import com.jasper.plantroom.ui.PlantPhotoCard
+import com.jasper.plantroom.ui.PlantPickerSheet
+import com.jasper.plantroom.ui.QuickActionSheet
 import com.jasper.plantroom.ui.PlantRules
 import com.jasper.plantroom.ui.QueueRow
 import com.jasper.plantroom.ui.SquareTile
@@ -207,6 +211,12 @@ private fun ShellScreen(
     var tab by rememberSaveable { mutableStateOf(Tab.Dashboard.name) }
     val current = Tab.valueOf(tab)
     var showAddPlant by rememberSaveable { mutableStateOf(false) }
+    var showQuick by remember { mutableStateOf(false) }
+    var showMore by remember { mutableStateOf(false) }
+    var pickGrowth by remember { mutableStateOf(false) }
+    var pickCare by remember { mutableStateOf(false) }
+    var growthPlant by remember { mutableStateOf<Plant?>(null) }
+    var carePlant by remember { mutableStateOf<Plant?>(null) }
     val scope = rememberCoroutineScope()
     val appCtx = androidx.compose.ui.platform.LocalContext.current
 
@@ -343,6 +353,64 @@ private fun ShellScreen(
             Tab.Profile -> ProfileView(Modifier.weight(1f))
             Tab.AddPlant -> DashboardView(plants, covers, careLog, galleryCount, growthCount, owner, onOpenPlant, quickCare, Modifier.weight(1f))
         }
+
+            // web #mobileAppNav: bottom app bar
+            BottomNavBar(
+                active = when (current) {
+                    Tab.Dashboard -> "dashboard"
+                    Tab.Plants -> "plants"
+                    Tab.Locations -> "locations"
+                    Tab.CareLog -> "log"
+                    Tab.Profile -> "profile"
+                    Tab.AddPlant -> "plants"
+                },
+                onSelect = { key ->
+                    tab = when (key) {
+                        "dashboard" -> Tab.Dashboard.name
+                        "plants" -> Tab.Plants.name
+                        else -> Tab.Locations.name
+                    }
+                },
+                onQuickAdd = { showQuick = true },
+                onMore = { showMore = true },
+            )
+        }
+
+        if (showQuick) {
+            QuickActionSheet(
+                owner = owner,
+                onAddPlant = { showAddPlant = true },
+                onGrowthPhoto = { pickGrowth = true },
+                onCareEntry = { pickCare = true },
+                onSignIn = onOwnerSignIn,
+                onDismiss = { showQuick = false },
+            )
+        }
+        if (showMore) {
+            MoreSheet(
+                owner = owner,
+                onCareLog = { tab = Tab.CareLog.name },
+                onToProfile = { tab = Tab.Profile.name },
+                onDismiss = { showMore = false },
+            )
+        }
+        if (pickGrowth) {
+            PlantPickerSheet(plants, "Growth Photo", onPick = { growthPlant = it }, onDismiss = { pickGrowth = false })
+        }
+        if (pickCare) {
+            PlantPickerSheet(plants, "Care Entry", onPick = { carePlant = it }, onDismiss = { pickCare = false })
+        }
+        growthPlant?.let { p ->
+            com.jasper.plantroom.ui.GrowthUploadSheet(
+                plantId = p.id, plantName = p.name,
+                onDismiss = { refreshed -> growthPlant = null; if (refreshed) onRefresh() },
+            )
+        }
+        carePlant?.let { p ->
+            com.jasper.plantroom.ui.CareLogSheet(
+                plant = p,
+                onDismiss = { saved -> carePlant = null; if (saved) onRefresh() },
+            )
         }
     }
 }
