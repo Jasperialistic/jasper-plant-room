@@ -44,4 +44,12 @@ class PlantWriterTest {
         assertNull(PlantRules.validate("Ok", "", ""))
         assertNull(PlantRules.validate("Ok", "2", "2026-10-11"))
     }
+
+    @Test
+    fun `care writes reject bundled and malformed plant identities`() {
+        assertEquals(true, PlantRules.isCanonicalPlantId("cc3c6a2e-238f-4f0d-9cb9-28d6fff5fcd8"))
+        assertEquals(false, PlantRules.isCanonicalPlantId("base:spanish-moss-big"))
+        assertEquals(false, PlantRules.isCanonicalPlantId("spanish-moss-big"))
+        assertNotNull(runCatching { PlantRules.requireCanonicalPlantId("base:spanish-moss-big") }.exceptionOrNull())
+    }
 }

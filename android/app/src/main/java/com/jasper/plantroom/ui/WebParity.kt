@@ -190,6 +190,7 @@ fun QueueRow(
     plant: Plant,
     photoUrl: String?,
     owner: Boolean,
+    careBusy: Boolean = false,
     onMoist: () -> Unit = {},
     onWatered: () -> Unit = {},
     onReservoir: () -> Unit = {},
@@ -228,8 +229,8 @@ fun QueueRow(
             if (owner) {
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    QuickCareButton("Still moist", onMoist)
-                    QuickCareButton("Watered", onWatered)
+                    QuickCareButton(if (careBusy) "Saving…" else "Still moist", !careBusy, onMoist)
+                    QuickCareButton(if (careBusy) "Saving…" else "Watered", !careBusy, onWatered)
                 }
             }
         }
@@ -320,12 +321,12 @@ fun SpeciesStrip(plants: List<Plant>, onSpecies: (String) -> Unit) {
 
 /** Owner dashboard quick care (web addCare actions). */
 @Composable
-private fun QuickCareButton(text: String, onClick: () -> Unit) {
+private fun QuickCareButton(text: String, enabled: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(Brush.verticalGradient(listOf(NoirColors.Champagne, NoirColors.ChampagneHi)))
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 11.dp, vertical = 5.dp)
     ) {
         Text(text, color = NoirColors.OnChampagne, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)

@@ -1,5 +1,5 @@
-/* Jasper's Plant Room v5.2.0 — Noir Edition shell */
-const CACHE_NAME='jasper-plant-room-shell-v5.2.0';
+/* Jasper's Plant Room v5.2.1 — Noir Edition recovery shell */
+const CACHE_NAME='jasper-plant-room-shell-v5.2.1';
 const PHOTO_CACHE_NAME='jasper-plant-room-photos-v1';
 const PLANT_MEDIA_ORIGIN='https://vslyrabiqgbgbcqgooxb.supabase.co';
 const SHELL=[
@@ -36,6 +36,7 @@ const SHELL=[
   './v49-organic-experience.js?v=4.43.0',
   './v50-media-efficiency.js?v=5.0.0',
   './v51-noir-premium.js?v=5.1.4',
+  './v52-care-recovery.js?v=5.2.1',
   './assets/art/wallpaper-leaves.svg',
   './assets/art/header-garden.svg',
   './assets/art/banner-frond.svg'
