@@ -39,13 +39,13 @@ test('generated botanical artwork wraps headers and background; owner photos sta
 });
 
 test('v51 loads last before boot and its artwork is precached', () => {
-  const script = index.indexOf('v51-noir-premium.js?v=5.1.2');
+  const script = index.indexOf('v51-noir-premium.js?v=5.1.3');
   const v50 = index.indexOf('v50-media-efficiency.js?v=5.0.0');
   const boot = index.indexOf('<script>boot();</script>');
   assert.notEqual(script, -1);
   assert.ok(v50 < script);
   assert.ok(script < boot);
-  assert.match(worker, /'\.\/v51-noir-premium\.js\?v=5\.1\.2'/);
+  assert.match(worker, /'\.\/v51-noir-premium\.js\?v=5\.1\.3'/);
   assert.match(worker, /'\.\/assets\/art\/wallpaper-leaves\.svg'/);
   assert.match(worker, /'\.\/assets\/art\/header-garden\.svg'/);
 });
