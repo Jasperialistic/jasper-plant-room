@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="blf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E7D6B4" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#C9B18A" stop-opacity=".03"/>
+    </linearGradient>
+    <radialGradient id="bglow">
+      <stop offset="0" stop-color="#C9B18A" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#C9B18A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bglowG">
+      <stop offset="0" stop-color="#2E5A41" stop-opacity=".26"/>
+      <stop offset="1" stop-color="#2E5A41" stop-opacity="0"/>
+    </radialGradient>
+    <g id="bleaf">
+      <path d="M0 0 C -40 -84 -34 -174 0 -252 C 34 -174 40 -84 0 0 Z" fill="url(#blf)" stroke="#E7D6B4" stroke-opacity=".2" stroke-width="1.2"/>
+      <path d="M0 -8 L0 -228" stroke="#E7D6B4" stroke-opacity=".18" stroke-width="1" fill="none"/>
+      <path d="M0 -58 C -14 -72 -23 -90 -28 -110 M0 -58 C 14 -72 23 -90 28 -110 M0 -120 C -10 -133 -16 -149 -20 -168 M0 -120 C 10 -133 16 -149 20 -168" stroke="#E7D6B4" stroke-opacity=".12" stroke-width=".9" fill="none"/>
+    </g>
+    <g id="bfrond">
+      <path d="M0 0 C 96 -26 190 -38 280 -32" stroke="#E7D6B4" stroke-opacity=".16" stroke-width="1.1" fill="none"/>
+      <path d="M58 -16 C 68 -48 68 -80 58 -108 C 48 -80 48 -48 58 -16 Z" fill="url(#blf)" stroke="#E7D6B4" stroke-opacity=".12" stroke-width=".9"/>
+      <path d="M126 -28 C 138 -62 138 -98 126 -130 C 114 -98 114 -62 126 -28 Z" fill="url(#blf)" stroke="#E7D6B4" stroke-opacity=".12" stroke-width=".9"/>
+      <path d="M194 -34 C 206 -66 206 -102 194 -134 C 182 -102 182 -66 194 -34 Z" fill="url(#blf)" stroke="#E7D6B4" stroke-opacity=".12" stroke-width=".9"/>
+      <path d="M92 -22 C 82 -52 82 -82 92 -110 C 102 -82 102 -52 92 -22 Z" fill="url(#blf)" stroke="#E7D6B4" stroke-opacity=".09" stroke-width=".9"/>
+      <path d="M160 -30 C 150 -60 150 -94 160 -124 C 170 -94 170 -60 160 -30 Z" fill="url(#blf)" stroke="#E7D6B4" stroke-opacity=".09" stroke-width=".9"/>
+    </g>
+  </defs>
+
+  <circle cx="900" cy="90" r="300" fill="url(#bglow)"/>
+  <circle cx="1050" cy="300" r="280" fill="url(#bglowG)"/>
+
+  <use href="#bleaf" transform="translate(980,380) rotate(14) scale(1.05)"/>
+  <use href="#bleaf" transform="translate(1110,372) rotate(28) scale(.85)"/>
+  <use href="#bleaf" transform="translate(860,392) rotate(2) scale(.7)"/>
+  <use href="#bfrond" transform="translate(1200,330) rotate(160) scale(1.0)"/>
+  <use href="#bfrond" transform="translate(760,376) rotate(176) scale(.7)"/>
+
+  <path d="M700 360 C 820 260 960 200 1120 172" stroke="#E7D6B4" stroke-opacity=".09" stroke-width="1.1" fill="none"/>
+</svg>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="lf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9B18A" stop-opacity=".13"/>
+      <stop offset="1" stop-color="#C9B18A" stop-opacity=".02"/>
+    </linearGradient>
+    <linearGradient id="lf2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E7D6B4" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#2E5A41" stop-opacity=".03"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#C9B18A" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#C9B18A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowG">
+      <stop offset="0" stop-color="#2E5A41" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#2E5A41" stop-opacity="0"/>
+    </radialGradient>
+    <g id="leaf">
+      <path d="M0 0 C -52 -110 -44 -230 0 -330 C 44 -230 52 -110 0 0 Z" fill="url(#lf)" stroke="#C9B18A" stroke-opacity=".16" stroke-width="1.2"/>
+      <path d="M0 -8 L0 -300" stroke="#C9B18A" stroke-opacity=".14" stroke-width="1" fill="none"/>
+      <path d="M0 -70 C -18 -88 -30 -110 -36 -136 M0 -70 C 18 -88 30 -110 36 -136 M0 -150 C -14 -166 -22 -186 -27 -208 M0 -150 C 14 -166 22 -186 27 -208 M0 -220 C -10 -232 -15 -246 -18 -262 M0 -220 C 10 -232 15 -246 18 -262" stroke="#C9B18A" stroke-opacity=".10" stroke-width=".8" fill="none"/>
+    </g>
+    <g id="frond">
+      <path d="M0 0 C -120 -40 -230 -60 -340 -52" stroke="#C9B18A" stroke-opacity=".14" stroke-width="1.1" fill="none"/>
+      <path d="M-70 -22 C -84 -58 -84 -96 -70 -128 C -56 -96 -56 -58 -70 -22 Z" fill="url(#lf2)" stroke="#C9B18A" stroke-opacity=".11" stroke-width=".9"/>
+      <path d="M-150 -38 C -166 -76 -166 -118 -150 -152 C -134 -118 -134 -76 -150 -38 Z" fill="url(#lf2)" stroke="#C9B18A" stroke-opacity=".11" stroke-width=".9"/>
+      <path d="M-230 -50 C -248 -88 -248 -130 -230 -166 C -212 -130 -212 -88 -230 -50 Z" fill="url(#lf2)" stroke="#C9B18A" stroke-opacity=".11" stroke-width=".9"/>
+      <path d="M-110 -30 C -96 -64 -96 -100 -110 -132 C -124 -100 -124 -64 -110 -30 Z" fill="url(#lf2)" stroke="#C9B18A" stroke-opacity=".08" stroke-width=".9"/>
+      <path d="M-190 -44 C -174 -80 -174 -120 -190 -154 C -206 -120 -206 -80 -190 -44 Z" fill="url(#lf2)" stroke="#C9B18A" stroke-opacity=".08" stroke-width=".9"/>
+    </g>
+  </defs>
+
+  <!-- soft ambient light -->
+  <circle cx="960" cy="180" r="430" fill="url(#glow)"/>
+  <circle cx="160" cy="1280" r="470" fill="url(#glowG)"/>
+  <circle cx="1080" cy="1380" r="360" fill="url(#glow)"/>
+
+  <!-- tall leaves -->
+  <use href="#leaf" transform="translate(150,520) rotate(-22) scale(1.2)"/>
+  <use href="#leaf" transform="translate(320,420) rotate(-8) scale(.95)"/>
+  <use href="#leaf" transform="translate(90,900) rotate(-32) scale(1.05)"/>
+  <use href="#leaf" transform="translate(990,620) rotate(18) scale(1.25)"/>
+  <use href="#leaf" transform="translate(1120,980) rotate(30) scale(.9)"/>
+  <use href="#leaf" transform="translate(860,1180) rotate(12) scale(1.0)"/>
+  <use href="#leaf" transform="translate(520,1420) rotate(-14) scale(1.1)"/>
+  <use href="#leaf" transform="translate(1080,300) rotate(26) scale(.8)"/>
+
+  <!-- fronds -->
+  <use href="#frond" transform="translate(1160,220) rotate(24) scale(1.15)"/>
+  <use href="#frond" transform="translate(70,1500) rotate(196) scale(1.25)"/>
+  <use href="#frond" transform="translate(700,1560) rotate(170) scale(1.0)"/>
+
+  <!-- thin stem arcs -->
+  <path d="M180 1600 C 240 1180 420 900 760 700" stroke="#C9B18A" stroke-opacity=".07" stroke-width="1.1" fill="none"/>
+  <path d="M1020 1600 C 980 1240 880 1020 640 860" stroke="#C9B18A" stroke-opacity=".06" stroke-width="1.1" fill="none"/>
+  <path d="M-20 240 C 180 320 360 460 470 660" stroke="#C9B18A" stroke-opacity=".05" stroke-width="1.1" fill="none"/>
+</svg>

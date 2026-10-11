@@ -22,8 +22,8 @@
   /* faint botanical texture — the background breathes instead of sitting flat */
   body::before{
     content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
-    background:url('img/hero-adansonii.jpg') center/cover no-repeat fixed;
-    opacity:.085; filter:contrast(1.12) saturate(.85);
+    background:url('img/art/wallpaper-leaves.svg') center/cover no-repeat fixed;
+    opacity:.9;
   }
   body::after{
     content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
@@ -34,7 +34,7 @@
   }
   /* image-wrapped headers */
   .masthead{position:relative; margin:-38px -34px 0; height:352px; overflow:hidden}
-  .mast-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 32%; filter:brightness(.92) contrast(1.05) saturate(1.04)}
+  .mast-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 60%}
   .mast-veil{position:absolute; inset:0;
     background:linear-gradient(180deg,rgba(8,8,8,.42) 0%,rgba(8,8,8,.18) 30%,rgba(8,8,8,.55) 62%,rgba(8,8,8,.97) 100%),
     radial-gradient(560px 280px at 86% 8%, rgba(201,177,138,.22), transparent 62%)}
@@ -42,7 +42,7 @@
   .mast-inner h1{text-shadow:0 2px 24px rgba(0,0,0,.55)}
   .section-banner{position:relative; height:158px; overflow:hidden; border-radius:18px; margin-top:14px;
     box-shadow:0 26px 52px rgba(0,0,0,.55), 0 6px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12)}
-  .section-banner img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 38%; filter:brightness(.85) contrast(1.05)}
+  .section-banner img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 70%}
   .banner-veil{position:absolute; inset:0; background:linear-gradient(90deg,rgba(8,8,8,.88) 0%,rgba(8,8,8,.55) 42%,rgba(8,8,8,.12) 100%)}
   .banner-inner{position:absolute; left:22px; bottom:18px}
   .banner-inner h3{font-family:'Bodoni Moda',serif; font-size:26px; font-weight:500; margin:6px 0 0; text-shadow:0 2px 18px rgba(0,0,0,.55)}
@@ -165,12 +165,12 @@
 <body>
 
 <header class="masthead">
-  <img class="mast-img" src="img/hero-monstera.jpg" alt="Monstera aurea">
+  <img class="mast-img" src="img/art/header-garden.svg" alt="">
   <div class="mast-veil"></div>
   <div class="mast-inner">
     <div class="eyebrow">Direction H · Noir Édition — MERGED (E components × F palette)</div>
     <h1>Tactile product design, <em>dressed in noir and champagne.</em></h1>
-    <p class="positioning" style="margin-bottom:0"><b>Your blend, locked in:</b> Direction E's floating cards and soft-physical pill buttons — wearing Direction F's colour mood. Headers are wrapped in real botanical photography: dark gradient veils, champagne light, serif titles over living texture.</p>
+    <p class="positioning" style="margin-bottom:0"><b>Your blend, locked in:</b> Direction E's floating cards and soft-physical pill buttons — wearing Direction F's colour mood. Headers are wrapped in generated translucent botanical art — faint leaf silhouettes and fronds in champagne over noir, wallpaper-clean, never photorealistic. Your own photos appear only as content: the specimens themselves.</p>
   </div>
 </header>
 
@@ -220,7 +220,7 @@
 
 <div class="eyebrow" style="margin-top:30px">Image-wrapped section headers</div>
 <div class="section-banner">
-  <img src="img/hero-azlanii.jpg" alt="Alocasia azlanii">
+  <img src="img/art/banner-frond.svg" alt="">
   <div class="banner-veil"></div>
   <div class="banner-inner">
     <div class="eyebrow">Specimen 052 · Alocasia azlanii</div>

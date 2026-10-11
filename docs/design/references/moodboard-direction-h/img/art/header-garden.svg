@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="hlf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E7D6B4" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#C9B18A" stop-opacity=".03"/>
+    </linearGradient>
+    <radialGradient id="hglow">
+      <stop offset="0" stop-color="#C9B18A" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#C9B18A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hglowG">
+      <stop offset="0" stop-color="#2E5A41" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#2E5A41" stop-opacity="0"/>
+    </radialGradient>
+    <g id="hleaf">
+      <path d="M0 0 C -46 -96 -39 -200 0 -288 C 39 -200 46 -96 0 0 Z" fill="url(#hlf)" stroke="#E7D6B4" stroke-opacity=".22" stroke-width="1.3"/>
+      <path d="M0 -8 L0 -262" stroke="#E7D6B4" stroke-opacity=".2" stroke-width="1.1" fill="none"/>
+      <path d="M0 -64 C -16 -80 -27 -100 -32 -122 M0 -64 C 16 -80 27 -100 32 -122 M0 -134 C -12 -148 -19 -166 -24 -186 M0 -134 C 12 -148 19 -166 24 -186 M0 -198 C -9 -208 -13 -221 -16 -235 M0 -198 C 9 -208 13 -221 16 -235" stroke="#E7D6B4" stroke-opacity=".14" stroke-width=".9" fill="none"/>
+    </g>
+    <g id="hmonstera">
+      <path d="M0 0 C -80 -66 -120 -158 -110 -252 C -64 -218 -26 -132 0 -22 C 26 -132 64 -218 110 -252 C 120 -158 80 -66 0 0 Z" fill="url(#hlf)" stroke="#E7D6B4" stroke-opacity=".2" stroke-width="1.3"/>
+      <path d="M0 -20 L0 -236" stroke="#E7D6B4" stroke-opacity=".18" stroke-width="1.1" fill="none"/>
+      <path d="M-20 -60 C -44 -76 -62 -100 -72 -128 M20 -60 C 44 -76 62 -100 72 -128 M-14 -120 C -34 -138 -50 -160 -58 -186 M14 -120 C 34 -138 50 -160 58 -186" stroke="#E7D6B4" stroke-opacity=".12" stroke-width=".9" fill="none"/>
+      <path d="M-46 -84 C -38 -96 -30 -104 -20 -110 M46 -84 C 38 -96 30 -104 20 -110 M-56 -150 C -46 -160 -36 -166 -26 -170 M56 -150 C 46 -160 36 -166 26 -170" stroke="#E7D6B4" stroke-opacity=".1" stroke-width=".8" fill="none"/>
+    </g>
+  </defs>
+
+  <!-- ambient light -->
+  <circle cx="1040" cy="120" r="360" fill="url(#hglow)"/>
+  <circle cx="180" cy="420" r="380" fill="url(#hglowG)"/>
+  <circle cx="720" cy="300" r="300" fill="url(#hglow)"/>
+
+  <!-- left cluster -->
+  <use href="#hleaf" transform="translate(120,540) rotate(-16) scale(1.25)"/>
+  <use href="#hleaf" transform="translate(258,548) rotate(-2) scale(1.0)"/>
+  <use href="#hmonstera" transform="translate(30,540) rotate(-26) scale(1.05)"/>
+
+  <!-- right cluster -->
+  <use href="#hmonstera" transform="translate(1270,560) rotate(18) scale(1.2)"/>
+  <use href="#hleaf" transform="translate(1380,540) rotate(30) scale(1.1)"/>
+  <use href="#hleaf" transform="translate(1150,560) rotate(8) scale(.85)"/>
+
+  <!-- center whisper -->
+  <use href="#hleaf" transform="translate(700,580) rotate(-6) scale(.72)"/>
+  <use href="#hleaf" transform="translate(560,590) rotate(-18) scale(.5)"/>
+  <use href="#hleaf" transform="translate(860,590) rotate(12) scale(.55)"/>
+
+  <!-- stem arcs -->
+  <path d="M60 520 C 200 380 380 300 560 268" stroke="#E7D6B4" stroke-opacity=".1" stroke-width="1.1" fill="none"/>
+  <path d="M1340 520 C 1220 396 1060 318 900 288" stroke="#E7D6B4" stroke-opacity=".1" stroke-width="1.1" fill="none"/>
+  <path d="M-20 40 C 120 70 240 130 330 220" stroke="#E7D6B4" stroke-opacity=".07" stroke-width="1.1" fill="none"/>
+</svg>

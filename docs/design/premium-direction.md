@@ -55,19 +55,23 @@ Every interactive/raised surface is built physically, never flat:
 
 ## Headers & background atmosphere
 
+- **Owner photography is CONTENT only** (specimen cards, galleries, profiles) —
+  never used as background or decorative imagery.
+- **Headers and backgrounds use GENERATED botanical artwork**: faint translucent
+  leaf/frond silhouettes and line-art in the champagne/espresso/emerald palette.
+  Wallpaper-clean, elegant, explicitly **not photorealistic**. Vector SVG assets
+  (`img/art/header-garden.svg`, `banner-frond.svg`, `wallpaper-leaves.svg`).
 - **Headers are image-wrapped, never bare text on flat color.** Page mastheads
-  and major section headers use real botanical photography (Monstera, Alocasia,
-  Philodendron — the owner's own collection) with dark gradient veils
-  (top-dark → bottom-near-black) plus a warm champagne radial light; serif
-  titles sit over the image with a soft text shadow for legibility.
+  and major section headers layer the generated botanical art with dark gradient
+  veils (top-dark → bottom-near-black) plus a warm champagne radial light; serif
+  titles sit over the artwork with a soft text shadow for legibility.
 - Section banners: ~158px tall, 18px radius, left-weighted veil
   (`rgba(8,8,8,.88)` → transparent) so titles stay readable at left.
-- **Page background is atmospheric, not flat:** a faint botanical leaf photo
-  layer at ~8.5% opacity (contrast-boosted, slightly desaturated) sits behind
-  all content, with a secondary layer of warm champagne/emerald radial glows and
-  a bottom darkening gradient. No empty developer-grey surfaces anywhere.
-- Photo veils must keep foliage identifiable — never blur or crop away the
-  plant's character.
+- **Page background is atmospheric, not flat:** the generated leaf wallpaper
+  layer sits behind all content with champagne/emerald radial glows and a bottom
+  darkening gradient. No empty developer-grey surfaces anywhere.
+- Artwork veils must keep the botanical silhouettes identifiable — subtle,
+  never noisy; opacity tuned for text legibility (AAA contrast on titles).
 
 ## Layout & spacing
 
