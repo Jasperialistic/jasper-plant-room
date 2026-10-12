@@ -68,13 +68,13 @@ import com.jasper.plantroom.net.PlantRepository
 import com.jasper.plantroom.ui.CareLogRow
 import com.jasper.plantroom.ui.Chip
 import com.jasper.plantroom.ui.EmptyState
-import com.jasper.plantroom.ui.PhotoSlide
-import com.jasper.plantroom.ui.PhotoViewer
 import com.jasper.plantroom.ui.BottomNavBar
 import com.jasper.plantroom.ui.MoreSheet
 import com.jasper.plantroom.ui.PlantPhotoCard
 import com.jasper.plantroom.ui.PlantPickerSheet
+import com.jasper.plantroom.ui.PlantTileTarget
 import com.jasper.plantroom.ui.QuickActionSheet
+import com.jasper.plantroom.ui.plantTileTarget
 import com.jasper.plantroom.ui.PlantRules
 import com.jasper.plantroom.ui.QueueRow
 import com.jasper.plantroom.ui.SquareTile
@@ -559,8 +559,6 @@ private fun PlantsView(
     var location by rememberSaveable { mutableStateOf("") }
     var statusFilter by rememberSaveable { mutableStateOf("") }
     var gridMode by rememberSaveable { mutableStateOf(PlantRepository.getGridMode()) } // Cards ⇄ Instagram grid (persisted)
-    var viewer by remember { mutableStateOf<Pair<List<PhotoSlide>, Int>?>(null) }
-    viewer?.let { (slides, start) -> PhotoViewer(slides, start) { viewer = null } }
 
     val groups = listOf("") + plants.mapNotNull { it.group }.filter { it.isNotBlank() }.distinct().sorted()
     val locations = listOf("") + plants.mapNotNull { it.location }.filter { it.isNotBlank() }.distinct().sorted()
@@ -654,11 +652,9 @@ private fun PlantsView(
             } else if (gridMode) {
                 items(filtered, key = { it.id }) { plant ->
                     SquareTile(plant, covers[plant.id]) {
-                        val slides = filtered.mapNotNull { p ->
-                            covers[p.id]?.let { PhotoSlide(it, listOfNotNull(p.name, p.location).joinToString(" · ")) }
+                        when (val target = plantTileTarget(gridMode, plant)) {
+                            is PlantTileTarget.Detail -> onOpenPlant(target.plantId)
                         }
-                        val idx = slides.indexOfFirst { it.url == covers[plant.id] }.coerceAtLeast(0)
-                        viewer = slides to idx
                     }
                 }
             } else {
