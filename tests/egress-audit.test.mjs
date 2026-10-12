@@ -14,7 +14,7 @@ const [index, navigation, worker, workflow, uploadQueue, kemuri, experience, bun
 ]);
 
 test('media patches install before the initial cloud load', () => {
-  const patchScript = index.indexOf('v47-mobile-navigation.js?v=4.43.3');
+  const patchScript = index.indexOf('v47-mobile-navigation.js?v=4.43.4');
   const uploadScript = index.indexOf('v48-upload-queue.js?v=4.43.1');
   const designScript = index.indexOf('v48-kemuri.js?v=4.43.0');
   const experienceScript = index.indexOf('v49-organic-experience.js?v=4.43.0');
@@ -52,12 +52,12 @@ test('mobile adjacent viewer slides use thumbnails while the current image remai
 });
 
 test('service worker and page use the same cache-busted media patch', () => {
-  assert.match(worker, /jasper-plant-room-shell-v5\.2\.2/);
-  assert.match(worker, /v47-mobile-navigation\.js\?v=4\.43\.3/);
+  assert.match(worker, /jasper-plant-room-shell-v5\.2\.3/);
+  assert.match(worker, /v47-mobile-navigation\.js\?v=4\.43\.4/);
   assert.match(worker, /v48-upload-queue\.js\?v=4\.43\.1/);
   assert.match(worker, /v48-kemuri\.js\?v=4\.43\.0/);
   assert.match(worker, /v49-organic-experience\.js\?v=4\.43\.0/);
-  assert.match(workflow, /v47-mobile-navigation\.js\?v=4\.43\.3/);
+  assert.match(workflow, /v47-mobile-navigation\.js\?v=4\.43\.4/);
   assert.doesNotMatch(worker, /fetch\(req,\{cache:'reload'\}\)/);
   for (const source of [...index.matchAll(/<script src="(v\d+[^"?]+\.js)\?v=[^"]+"><\/script>/g)].map(match => match[1])) {
     assert.match(worker, new RegExp(source.replaceAll('.', '\\.')));

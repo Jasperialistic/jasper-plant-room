@@ -1,6 +1,8 @@
 package com.jasper.plantroom.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -176,14 +178,14 @@ fun CareLogSheet(plant: Plant, onDismiss: (saved: Boolean) -> Unit) {
 
     Dialog(onDismissRequest = { if (!busy) onDismiss(false) }) {
         Surface(shape = RoundedCornerShape(22.dp), color = NoirColors.CardTop) {
-            Column(Modifier.padding(20.dp)) {
+            Column(Modifier.sizeIn(maxHeight = 680.dp).padding(20.dp).verticalScroll(rememberScrollState())) {
                 Text("LOG CARE", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
                 Text(plant.name, style = MaterialTheme.typography.titleLarge, color = NoirColors.Ivory)
                 Spacer(Modifier.height(12.dp))
                 Text("ACTION", style = MaterialTheme.typography.labelMedium, color = NoirColors.Muted)
-                Row(Modifier.fillMaxWidth()) {
+                FlowRow(Modifier.fillMaxWidth()) {
                     careActions.forEach { candidate ->
-                        TextButton(onClick = { action = candidate }) {
+                        TextButton(enabled = !busy, onClick = { action = candidate }) {
                             Text(
                                 candidate,
                                 style = MaterialTheme.typography.labelMedium,
@@ -205,11 +207,16 @@ fun CareLogSheet(plant: Plant, onDismiss: (saved: Boolean) -> Unit) {
                 }
                 Spacer(Modifier.height(14.dp))
                 Row {
-                    TextButton(onClick = { onDismiss(false) }) { Text("CANCEL", color = NoirColors.Muted) }
+                    TextButton(enabled = !busy, onClick = { onDismiss(false) }) { Text("CANCEL", color = NoirColors.Muted) }
                     Spacer(Modifier.weight(1f))
                     Button(
                         onClick = {
+                            if (nextCheck.isNotBlank() && runCatching { java.time.LocalDate.parse(nextCheck.trim()) }.isFailure) {
+                                error = "Next check must be a date like 2026-10-12."
+                                return@Button
+                            }
                             busy = true
+                            error = null
                             scope.launch {
                                 try {
                                     val next = nextCheck.trim().ifBlank {

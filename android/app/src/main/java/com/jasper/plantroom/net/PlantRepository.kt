@@ -122,7 +122,21 @@ object PlantRepository {
     }
 
     val isAuthenticated: Boolean
-        get() = client.auth.currentSessionOrNull() != null
+        get() = client.auth.currentSessionOrNull() != null && client.auth.currentUserOrNull()?.email.equals("jasperquekofficial@gmail.com", ignoreCase = true)
+
+    fun requireOwnerId(): String {
+        check(isAuthenticated) { "Owner sign-in is required to make changes." }
+        return client.auth.currentUserOrNull()?.id ?: error("Owner session is unavailable.")
+    }
+
+    private val careCoordinator: CareSaveCoordinator by lazy {
+        val journalPrefs = appContext.getSharedPreferences("plantroom_care_retries", android.content.Context.MODE_PRIVATE)
+        CareSaveCoordinator(SupabaseCareTransport(), object : CareAttemptJournal {
+            override fun get(key: String): String? = journalPrefs.getString(key, null)
+            override fun put(key: String, id: String) { check(journalPrefs.edit().putString(key, id).commit()) { "Could not preserve the care retry." } }
+            override fun remove(key: String) { journalPrefs.edit().remove(key).commit() }
+        })
+    }
 
     suspend fun signIn(email: String, password: String) {
         client.auth.signInWith(Email) {
@@ -148,34 +162,7 @@ object PlantRepository {
      * schedules next_check = today + checkDays; "Checked — still moist" = +1 day.
      */
     suspend fun logCare(plant: Plant, action: String, details: String = "", nextCheck: String?) {
-        val userId = client.auth.currentUserOrNull()?.id ?: error("Not signed in")
-        PlantRules.requireCanonicalPlantId(plant.id)
-        val today = java.time.LocalDate.now().toString()
-        val jp = { s: String -> kotlinx.serialization.json.JsonPrimitive(s) }
-        client.postgrest["care_log"].insert(
-            kotlinx.serialization.json.buildJsonObject {
-                put("id", jp(java.util.UUID.randomUUID().toString()))
-                put("user_id", jp(userId))
-                put("plant_id", jp(plant.id))
-                put("care_date", jp(today))
-                put("plant_name", jp(plant.name))
-                put("action", jp(action))
-                put("details", jp(details))
-                put(
-                    "location",
-                    plant.location?.let { jp(it) } ?: kotlinx.serialization.json.JsonNull
-                )
-            }
-        )
-        client.postgrest["plants"].update(
-            kotlinx.serialization.json.buildJsonObject {
-                put("last_care", jp(today))
-                put("last_action", jp(action))
-                if (nextCheck != null) put("next_check", jp(nextCheck)) else put("next_check", kotlinx.serialization.json.JsonNull)
-            }
-        ) {
-            filter { eq("id", plant.id) }
-        }
+        careCoordinator.save(requireOwnerId(), plant, java.time.LocalDate.now().toString(), action, details, nextCheck?.ifBlank { null })
     }
 
     suspend fun loadPlants(): List<Plant> =

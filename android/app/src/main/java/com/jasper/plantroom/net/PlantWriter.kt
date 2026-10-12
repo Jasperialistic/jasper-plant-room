@@ -9,6 +9,7 @@ import java.time.LocalDate
 
 @Serializable
 data class CareLogInsert(
+    val id: String,
     @SerialName("user_id") val userId: String,
     @SerialName("plant_id") val plantId: String,
     @SerialName("care_date") val careDate: String,
@@ -42,7 +43,7 @@ data class PlantUpdate(
 /** Pure rules shared with the web app — kept side-effect free for JVM tests. */
 object PlantRules {
 
-    private val uuidPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+    private val uuidPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
     fun isCanonicalPlantId(value: String): Boolean = uuidPattern.matches(value)
 
@@ -83,42 +84,21 @@ object PlantRules {
  */
 object PlantWriter {
 
-    private fun requireOwner(): String =
-        PlantRepository.client.auth.currentUserOrNull()?.id
-            ?: error("Owner sign-in is required to make changes.")
+    private fun requireOwner(): String = PlantRepository.requireOwnerId()
 
     /** Web contract: care_log row + plants.last_care/last_action/next_check update. */
     suspend fun addCare(plant: Plant, action: String, details: String, nextCheck: String?) {
-        val userId = requireOwner()
-        PlantRules.requireCanonicalPlantId(plant.id)
-        val today = java.time.LocalDate.now().toString()
-        PlantRepository.client.postgrest["care_log"].insert(
-            CareLogInsert(
-                userId = userId,
-                plantId = plant.id,
-                careDate = today,
-                plantName = plant.name,
-                action = action,
-                details = details,
-                location = plant.location,
-            ),
-        )
-        PlantRepository.client.postgrest["plants"].update(
-            mapOf(
-                "last_care" to today,
-                "last_action" to action,
-                "next_check" to nextCheck,
-            ),
-        ) {
-            filter { eq("id", plant.id) }
-        }
+        PlantRepository.logCare(plant, action, details, nextCheck)
     }
 
     suspend fun updatePlant(plantId: String, update: PlantUpdate) {
         requireOwner()
-        PlantRepository.client.postgrest["plants"].update(update) {
+        PlantRules.requireCanonicalPlantId(plantId)
+        val updated = PlantRepository.client.postgrest["plants"].update(update) {
             filter { eq("id", plantId) }
-        }
+            select()
+        }.decodeSingle<Plant>()
+        check(updated.id == plantId) { "Plant update returned no matching record." }
     }
 
     suspend fun createPlant(update: PlantUpdate, legacyId: String) {

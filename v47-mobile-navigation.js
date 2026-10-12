@@ -884,7 +884,7 @@
 
 /* Header: compact version label and account / backup dropdown. */
 (function(){
-  const VERSION='v5.2.0';
+  const VERSION='v5.2.3';
   const css=`
 .top-actions{align-items:center}
 #v416Version{flex:0 0 auto;padding:5px 8px;border:1px solid #2d463b;border-radius:999px;background:#12211b;color:#8fa39a;font-size:10px;font-weight:800;letter-spacing:.04em}
@@ -1442,9 +1442,10 @@ body.owner-mode #queue .queue-item.v413-care-ready{grid-template-columns:64px mi
     const today=isoToday();let action='',next=null;
     if(type==='moist'){action='Checked — still moist';next=addDays(today,1);}
     if(type==='water'){action='Watered';next=p.checkDays?addDays(today,p.checkDays):null;}
-    const buttons=card.querySelectorAll('.v413-care-action');buttons.forEach(x=>x.disabled=true);button.textContent='Saving…';
+    const buttons=[...card.querySelectorAll('.v413-care-action')],labels=buttons.map(x=>x.textContent);buttons.forEach(x=>x.disabled=true);button.textContent='Saving…';
     try{await addCare(p,action,'',next);}
-    catch(error){console.error('Dashboard care action failed',error);alert(error?.message||'Could not save this care entry.');buttons.forEach(x=>x.disabled=false);button.textContent=type==='water'?'Watered':'Still moist';}
+    catch(error){console.error('Dashboard care action failed',error);alert(error?.message||'Could not save this care entry.');}
+    finally{buttons.forEach((x,i)=>{x.disabled=false;x.textContent=labels[i];});}
   }
   function addUpcomingCountdown(card,p){
     if(statusOf(p)!=='upcoming'||!p.nextCheck)return;
@@ -2438,6 +2439,10 @@ body{
   releases.unshift({"version":"4.41.2","date":"20 Sep 2026","title":"Thumbnail delivery enforcement","changes":["Installed the media-delivery patches before the first cloud render so Dashboard, Plants, Gallery and Growth lists use existing lightweight derivatives on initial load.","Kept Gallery preview changes on thumbnails instead of briefly requesting originals.","Limited the mobile full-screen carousel to the deliberately opened original while adjacent swipe previews use thumbnails."]});
   releases.unshift({"version":"4.42.0","date":"23 Sep 2026","title":"KEMURI performance foundation","changes":["Externalized bundled originals so the app shell no longer downloads megabytes of embedded images on every online launch.","Added bounded, retryable multi-photo uploads with per-item progress and metadata confirmation.","Introduced the shared KEMURI visual foundation and reduced mobile glass/compositing cost."]});
   releases.unshift({"version":"4.43.0","date":"23 Sep 2026","title":"Organic KEMURI experience","changes":["Added a subtle layered green-smoke atmosphere with dark organic depth while keeping plant imagery dominant.","Introduced glass-like cards, elevated photo surfaces and restrained spring motion across navigation, galleries and dialogs.","Added tactile press feedback and supported-device vibration while preserving reduced-motion and mobile heat safeguards."]});
+  releases.unshift({version:'5.2.0',date:'11 Oct 2026',title:'Noir Edition header refinement',changes:["Simplified the top edge so Guren's Garden remains the main header.","Preserved the Noir botanical artwork, typography, cards and navigation."]});
+  releases.unshift({version:'5.2.2',date:'11 Oct 2026',title:'Cloud collection recovery',changes:["Fixed startup failing after the old header subtitle was removed.","Restored the live cloud collection instead of showing the smaller bundled fallback.","Kept cached collection data available when a secondary cloud request fails."]});
+  releases.unshift({version:'5.2.3',date:'12 Oct 2026',title:'Reliable care saves and retries',changes:["Kept owner Dashboard Still moist, Watered and Custom actions; visitor pages continue to hide owner controls.","Resolved bundled plant references to their existing cloud records before logging care.","Verified both the care entry and next-check schedule before completing a save.","Made retries reuse the same care entry after a timeout or partial save, including after a page refresh.","Restored care buttons after errors or timeouts and clarified partial-save messages.","Corrected the version badge and patch-note order so the latest release appears first."]});
+  releases.sort((a,b)=>{const left=a.version.split('.').map(Number),right=b.version.split('.').map(Number);for(let i=0;i<Math.max(left.length,right.length);i++){const diff=(right[i]||0)-(left[i]||0);if(diff)return diff;}return 0;});
   const style=document.createElement('style');
   style.id='v429PatchNotesStyles';
   style.textContent=`

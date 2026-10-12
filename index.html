@@ -1654,9 +1654,14 @@ function statusOf(p){if(isReservoir(p))return'reservoir';if(!p.nextCheck)return'
 function statusLabel(p){const s=statusOf(p);return s==='overdue'?'Overdue':s==='today'?'Check today':s==='reservoir'?'Reservoir':'Upcoming';}
 function setCloudStatus(text,offline=false){const el=$('#cloudStatus');if(!el)return;el.textContent=text;el.classList.toggle('offline',offline);}
 function requireOwner(){if(isOwner&&session)return true;openAuth('Owner login is required to edit the collection.');return false;}
-const careAttempts=new Map();
-function cloudStatusIdle(){setCloudStatus(isOwner?'Owner · cloud synced':'Public view');}
-function withCareTimeout(promise,label='Care update',ms=20000){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} timed out. Check your connection and retry; the same care entry will be reused safely.`)),ms);})]).finally(()=>clearTimeout(timer));}
+let careWriter=null;
+async function withCareTimeout(query,label='Care update',ms=20000){
+ const controller=new AbortController();let timer;
+ const request=typeof query.abortSignal==='function'?query.abortSignal(controller.signal):query;
+ try{return await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error(`${label} timed out. Retry safely.`));},ms);})]);}
+ finally{clearTimeout(timer);}
+}
+async function careQuery(query,label){const result=await withCareTimeout(query,label);if(result.error)throw result.error;return result.data;}
 
 function rowToPlant(r){return {cloudId:r.id,legacyId:r.legacy_id,id:r.legacy_id,name:r.name,group:r.plant_group,location:r.location,light:r.light,environment:r.environment,pot:r.pot,potType:r.pot_type,outer:r.outer_pot,medium:r.medium,mode:r.watering_mode,lastCare:r.last_care,lastAction:r.last_action,nextCheck:r.next_check,checkDays:r.check_days,rule:r.check_rule,notes:r.notes,confidence:r.confidence};}
 function plantToRow(p,userId){return {user_id:userId,legacy_id:p.id,name:p.name,plant_group:p.group,location:p.location,light:p.light,environment:p.environment,pot:p.pot,pot_type:p.potType,outer_pot:p.outer,medium:p.medium,watering_mode:p.mode,last_care:p.lastCare||null,last_action:p.lastAction||null,next_check:p.nextCheck||null,check_days:p.checkDays||null,check_rule:p.rule||null,notes:p.notes||null,confidence:p.confidence||null};}
@@ -1808,27 +1813,18 @@ async function resolveWritablePlant(p){
  return canonical;
 }
 async function addCare(p,action,details='',next=null){
- if(!requireOwner())return;
- const plant=await resolveWritablePlant(p),plantId=String(plant.cloudId||plant.id||'');
- if(!window.PlantCareRecovery.isUuid(plantId))throw new Error('Plant identity is not a valid cloud UUID. Nothing was saved.');
- const today=isoToday(),fingerprint=window.PlantCareRecovery.careFingerprint({plantId,date:today,action,details,nextCheck:next});
- let attempt=careAttempts.get(fingerprint);if(attempt?.promise)return attempt.promise;
- if(!attempt){attempt={id:crypto.randomUUID(),promise:null};careAttempts.set(fingerprint,attempt);}
- attempt.promise=(async()=>{
-  setCloudStatus('Saving…');
-  const payload={id:attempt.id,user_id:session.user.id,plant_id:plantId,care_date:today,plant_name:plant.name,action,details,location:plant.location};
-  const ins=await withCareTimeout(sb.from('care_log').insert(payload),'Care log save');
-  if(ins.error){
-   if(!window.PlantCareRecovery.isDuplicateError(ins.error))throw ins.error;
-   const existing=await withCareTimeout(sb.from('care_log').select('id').eq('id',attempt.id).eq('user_id',session.user.id).maybeSingle(),'Care retry check');
-   if(existing.error||!existing.data)throw ins.error;
-  }
-  const upd=await withCareTimeout(sb.from('plants').update({last_care:today,last_action:action,next_check:next||null}).eq('id',plantId),'Plant schedule update');
-  if(upd.error)throw upd.error;
-  await withCareTimeout(loadCloud(),'Collection refresh');
-  careAttempts.delete(fingerprint);
- })();
- try{return await attempt.promise;}finally{attempt.promise=null;if($('#cloudStatus')?.textContent==='Saving…')cloudStatusIdle();}
+ if(!requireOwner())throw new Error('Owner sign-in is required to log care.');
+ if(!careWriter)careWriter=window.PlantCareRecovery.createWriter({
+  ownerId:()=>isOwner&&session?session.user.id:null,today:isoToday,makeId:()=>crypto.randomUUID(),resolvePlant:resolveWritablePlant,status:setCloudStatus,
+  readAttempt:key=>{try{return JSON.parse(sessionStorage.getItem('plant-care:'+key)||'null');}catch{return null;}},
+  writeAttempt:(key,value)=>{try{sessionStorage.setItem('plant-care:'+key,JSON.stringify(value));}catch{}},
+  removeAttempt:key=>{try{sessionStorage.removeItem('plant-care:'+key);}catch{}},
+  findLog:(id,owner)=>careQuery(sb.from('care_log').select('id,user_id,plant_id,care_date,action,details').eq('id',id).eq('user_id',owner).maybeSingle(),'Care retry check'),
+  insertLog:payload=>careQuery(sb.from('care_log').insert(payload),'Care log save'),
+  updatePlant:(id,owner,payload)=>careQuery(sb.from('plants').update(payload).eq('id',id).eq('user_id',owner).select('id,last_care,last_action,next_check').single(),'Plant schedule update'),
+  refresh:async(plant,entry,updated)=>{const local=db.plants.find(x=>x.cloudId===updated.id);if(local)Object.assign(local,{lastCare:updated.last_care,lastAction:updated.last_action,nextCheck:updated.next_check});await withCareTimeout(loadCloud(),'Collection refresh');}
+ });
+ return careWriter(p,action,details,next);
 }
 async function quickAction(p,type,button){
  if(!requireOwner())return;
@@ -1838,7 +1834,7 @@ async function quickAction(p,type,button){
  if(!action)return;
  buttons.forEach(item=>item.disabled=true);if(button)button.textContent='Saving…';
  try{await addCare(p,action,'',next);$('#plantDialog').close();}
- catch(e){console.error(e);alert(e.message||String(e));setCloudStatus('Care not saved · retry available',true);}
+ catch(e){console.error(e);alert(e.message||String(e));setCloudStatus('Care update incomplete · retry available',true);}
  finally{buttons.forEach((item,index)=>{if(item.isConnected){item.disabled=false;item.textContent=labels[index];}});}
 }
 function populateLogPlants(){const s=$('#logPlant'),cur=s.value;s.innerHTML=db.plants.filter(p=>!String(p.cloudId).startsWith('base:')).map(p=>`<option value="${p.cloudId}">${esc(p.name)}</option>`).join('');if(cur)s.value=cur;}
@@ -1885,7 +1881,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v44-add-plant-presets-light.js?v=4.4.1"></script>
   <script src="v45-location-light-link.js?v=4.5.2"></script>
   <script src="v46-pwa-shell.js?v=4.6.0"></script>
-  <script src="v47-mobile-navigation.js?v=4.43.3"></script>
+  <script src="v47-mobile-navigation.js?v=4.43.4"></script>
   <script src="v26-photo-fit.js?v=2.6.0"></script>
   <script src="v27-permanent-delete.js?v=2.7.0"></script>
   <script src="v28-chatgpt-share.js?v=2.9.0"></script>
@@ -1901,7 +1897,7 @@ let lastFocusRefresh=Date.now();window.addEventListener('focus',()=>{const now=D
   <script src="v49-organic-experience.js?v=4.43.0"></script>
   <script src="v50-media-efficiency.js?v=5.0.0"></script>
   <script src="v51-noir-premium.js?v=5.1.4"></script>
-  <script src="v52-care-recovery.js?v=5.2.2"></script>
+  <script src="v52-care-recovery.js?v=5.2.3"></script>
   <script>boot();</script>
 </body>
 </html>

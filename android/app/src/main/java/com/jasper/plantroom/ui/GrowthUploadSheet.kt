@@ -5,6 +5,10 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,18 +65,20 @@ fun GrowthUploadSheet(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val coordinator = remember { GrowthUploadCoordinator(SupabaseWriteTransport()) }
+    val coordinator = remember { GrowthUploadCoordinator(SupabaseWriteTransport(), maxConcurrency = if ((context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice) 1 else 2) }
     val items by coordinator.items.collectAsState()
 
     var picked by remember { mutableStateOf<List<Pair<String, android.net.Uri>>>(emptyList()) }
     var photoDate by remember { mutableStateOf(LocalDate.now().toString()) }
     var note by remember { mutableStateOf("") }
     var running by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(20)
     ) { uris ->
-        picked = uris.mapIndexed { index, uri -> "${newUploadId().take(8)}-$index" to uri }
+        val known = picked.map { it.second }.toSet()
+        picked = picked + uris.filter { it !in known }.mapIndexed { index, uri -> "${newUploadId().take(8)}-$index" to uri }
     }
 
     Dialog(onDismissRequest = { if (!running) onDismiss(items.any { it.state == UploadState.COMPLETE }) }) {
@@ -81,9 +87,10 @@ fun GrowthUploadSheet(
             color = NoirColors.CardTop,
             tonalElevation = 8.dp,
         ) {
-            Column(Modifier.padding(20.dp)) {
+            Column(Modifier.sizeIn(maxHeight = 680.dp).padding(20.dp).verticalScroll(rememberScrollState())) {
                 Text("ADD GROWTH PHOTOS", style = MaterialTheme.typography.labelMedium, color = NoirColors.Champagne)
                 Text(plantName, style = MaterialTheme.typography.titleLarge, color = NoirColors.Ivory)
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
@@ -138,10 +145,15 @@ fun GrowthUploadSheet(
                         }
                     }
                     Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
                             onClick = {
+                                if (runCatching { LocalDate.parse(photoDate.trim()) }.isFailure) {
+                                    error = "Growth date must be a date like 2026-10-12."
+                                    return@Button
+                                }
                                 running = true
+                                error = null
                                 coordinator.enqueue(
                                     plantId, photoDate.trim(), note.trim(),
                                     picked.map { (id, uri) ->
@@ -151,11 +163,13 @@ fun GrowthUploadSheet(
                                     },
                                 )
                                 scope.launch {
-                                    coordinator.run()
-                                    running = false
+                                    try { coordinator.run() }
+                                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                    catch (e: Exception) { error = e.message ?: "Upload failed. Retry safely." }
+                                    finally { running = false }
                                 }
                             },
-                            enabled = !running,
+                            enabled = !running && picked.any { photo -> items.none { it.id == photo.first } },
                             shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = NoirColors.Champagne,
@@ -178,7 +192,7 @@ fun GrowthUploadSheet(
                     }
                 }
 
-                val failed = items.count { it.state == UploadState.FAILED }
+                val failed = items.count { it.state == UploadState.FAILED || it.state == UploadState.CANCELLED }
                 if (failed > 0 && !running) {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -190,8 +204,10 @@ fun GrowthUploadSheet(
                         onClick = {
                             running = true
                             scope.launch {
-                                coordinator.run()
-                                running = false
+                                try { coordinator.run(resumeCancelled = true) }
+                                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                catch (e: Exception) { error = e.message ?: "Upload failed. Retry safely." }
+                                finally { running = false }
                             }
                         },
                         shape = RoundedCornerShape(50),

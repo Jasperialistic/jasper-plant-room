@@ -7,6 +7,7 @@ import com.jasper.plantroom.net.UploadState
 import com.jasper.plantroom.net.UploadTransport
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -77,6 +78,38 @@ private fun coordinator(transport: FakeTransport, concurrency: Int = 2, transien
     GrowthUploadCoordinator(transport, maxConcurrency = concurrency, transient = transient)
 
 class PhotoUploaderTest {
+
+    @Test
+    fun `metadata failure retries the same random path without reupload or redecode`() = runBlocking {
+        val base = FakeTransport()
+        var pathCalls = 0;var metadataCalls = 0;var decodeCalls = 0
+        val transport = object : UploadTransport by base {
+            override fun originalPath(plantId: String, fileName: String) = "$plantId/growth/${++pathCalls}-$fileName"
+            override suspend fun insertMetadata(plantId: String, storagePath: String, thumbnailPath: String, photoDate: String, note: String): String {
+                if (++metadataCalls == 1) throw IOException("network failure")
+                return base.insertMetadata(plantId,storagePath,thumbnailPath,photoDate,note)
+            }
+        }
+        val c = GrowthUploadCoordinator(transport,retryDelaysMs=listOf(0,0))
+        val file = PendingPhoto("a","a.jpg") { decodeCalls++;PreparedPhoto(ByteArray(10),ByteArray(4)) }
+        c.enqueue("plant-1","2026-10-12","",listOf(file));c.run()
+        assertEquals(1,pathCalls);assertEquals(1,decodeCalls)
+        assertEquals(1,base.originals.size);assertEquals(1,base.thumbnails.size);assertEquals(1,base.metadata.size)
+        assertEquals(UploadState.COMPLETE,c.items.value.single().state)
+        c.enqueue("plant-1","2026-10-12","",listOf(file));c.run()
+        assertEquals(1,c.items.value.size);assertEquals(1,base.metadata.size)
+    }
+
+    @Test
+    fun `active cancellation restores queue and resume completes without losing items`() = runBlocking {
+        val t = FakeTransport();val c = coordinator(t,concurrency=1)
+        c.enqueue("plant-1","2026-10-12","",listOf(photo("a"),photo("b")))
+        val job=launch { c.run() };delay(5);c.cancel();job.join()
+        assertTrue(c.items.value.all { it.state == UploadState.CANCELLED })
+        c.run(resumeCancelled=true)
+        assertTrue(c.items.value.all { it.state == UploadState.COMPLETE })
+        assertEquals(2,t.metadata.size)
+    }
 
     @Test
     fun `complete batch uploads originals thumbnails and metadata per photo`() = runBlocking {

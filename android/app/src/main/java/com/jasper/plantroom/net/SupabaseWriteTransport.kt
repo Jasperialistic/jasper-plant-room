@@ -21,17 +21,24 @@ private data class ExistingRow(val id: String)
 class SupabaseWriteTransport : UploadTransport {
 
     private fun requireOwner(): String {
-        val user = PlantRepository.client.auth.currentUserOrNull()
-            ?: error("Owner sign-in is required to upload photos.")
-        return user.id
+        return PlantRepository.requireOwnerId()
     }
 
     private fun safeName(fileName: String): String =
         fileName.replace(Regex("[^A-Za-z0-9._-]"), "-").takeIf { it.isNotBlank() } ?: "photo.jpg"
 
     /** Create-only stable path, mirroring the web queue's contract. */
-    override fun originalPath(plantId: String, fileName: String): String =
-        "${requireOwner()}/$plantId/growth/${UUID.randomUUID()}-${safeName(fileName)}"
+    override fun originalPath(plantId: String, fileName: String): String {
+        PlantRules.requireCanonicalPlantId(plantId)
+        return "${requireOwner()}/$plantId/growth/${UUID.randomUUID()}-${safeName(fileName)}"
+    }
+
+    private suspend fun createOnly(upload: suspend () -> Unit) {
+        try { upload() } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            if (!Regex("already exists|duplicate|resource exists", RegexOption.IGNORE_CASE).containsMatchIn(error.message ?: "")) throw error
+        }
+    }
 
     override fun thumbnailPath(originalPath: String): String =
         originalPath.replace("/growth/", "/thumbs/")
@@ -44,19 +51,23 @@ class SupabaseWriteTransport : UploadTransport {
         }.decodeList<ExistingRow>().firstOrNull()?.id
 
     override suspend fun uploadOriginal(path: String, bytes: ByteArray, mimeType: String) {
-        PlantRepository.client.storage.from(BuildConfig.MEDIA_BUCKET)
+        requireOwner()
+        createOnly { PlantRepository.client.storage.from(BuildConfig.MEDIA_BUCKET)
             .upload(path, bytes) {
                 contentType = ContentType.parse(mimeType)
                 upsert = false
             }
+        }
     }
 
     override suspend fun uploadThumbnail(path: String, bytes: ByteArray) {
-        PlantRepository.client.storage.from(BuildConfig.MEDIA_BUCKET)
+        requireOwner()
+        createOnly { PlantRepository.client.storage.from(BuildConfig.MEDIA_BUCKET)
             .upload(path, bytes) {
                 contentType = ContentType.Image.JPEG
                 upsert = false
             }
+        }
     }
 
     override suspend fun insertMetadata(
@@ -67,6 +78,7 @@ class SupabaseWriteTransport : UploadTransport {
         note: String,
     ): String {
         val row = MetadataInsert(
+            id = UUID.nameUUIDFromBytes(storagePath.toByteArray(Charsets.UTF_8)).toString(),
             userId = requireOwner(),
             plantId = plantId,
             kind = "growth",
@@ -75,15 +87,20 @@ class SupabaseWriteTransport : UploadTransport {
             photoDate = photoDate,
             note = note,
         )
-        val inserted = PlantRepository.client.postgrest["plant_photos"].insert(row) {
-            select(Columns.list("id"))
-        }.decodeSingle<ExistingRow>()
-        return inserted.id
+        return try {
+            PlantRepository.client.postgrest["plant_photos"].insert(row) {
+                select(Columns.list("id"))
+            }.decodeSingle<ExistingRow>().id
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
+            findExisting(storagePath) ?: throw error
+        }
     }
 }
 
 @Serializable
 private data class MetadataInsert(
+    val id: String,
     @SerialName("user_id") val userId: String,
     @SerialName("plant_id") val plantId: String,
     val kind: String,

@@ -250,7 +250,9 @@ private fun ShellScreen(
     val quickCare: (Plant, String, String?) -> Unit = { plant, action, next ->
         if (plant.id !in careInFlight) scope.launch {
             careInFlight = careInFlight + plant.id
+            try {
             val result = runCatching { PlantRepository.logCare(plant, action, "", next) }
+            if (result.exceptionOrNull() is kotlinx.coroutines.CancellationException) throw result.exceptionOrNull()!!
             if (result.isSuccess) {
                 android.util.Log.d("QuickCare", "logged '$action' for ${plant.name} next=$next")
                 android.widget.Toast.makeText(appCtx, "${plant.name}: $action logged", android.widget.Toast.LENGTH_SHORT).show()
@@ -258,8 +260,8 @@ private fun ShellScreen(
                 android.util.Log.e("QuickCare", "logCare failed for ${plant.name}", result.exceptionOrNull())
                 android.widget.Toast.makeText(appCtx, "Care log failed: ${result.exceptionOrNull()?.message ?: "unknown"}", android.widget.Toast.LENGTH_LONG).show()
             }
-            careInFlight = careInFlight - plant.id
             if (result.isSuccess) onRefresh()
+            } finally { careInFlight = careInFlight - plant.id }
         }
     }
 

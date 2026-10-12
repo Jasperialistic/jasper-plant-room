@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeout
 import java.util.UUID
 
 enum class UploadState { QUEUED, PREPARING, UPLOADING, CONFIRMING, COMPLETE, FAILED, CANCELLED }
@@ -64,15 +68,18 @@ class GrowthUploadCoordinator(
     private val maxConcurrency: Int = 2,
     private val maxAttempts: Int = 3,
     private val retryDelaysMs: List<Long> = listOf(700L, 1600L),
-    private val transient: (Throwable) -> Boolean = { true },
+    private val transient: (Throwable) -> Boolean = { error ->
+        Regex("network|connection|timeout|timed out|temporar|\\b5[0-9]{2}\\b|\\b429\\b", RegexOption.IGNORE_CASE).containsMatchIn(error.message ?: "") || error is java.io.IOException
+    },
 ) {
     private val _items = MutableStateFlow<List<UploadItem>>(emptyList())
     val items: StateFlow<List<UploadItem>> = _items
 
     fun enqueue(plantId: String, photoDate: String, note: String, files: List<PendingPhoto>) {
+        java.time.LocalDate.parse(photoDate)
         cancelled = false
         _items.update { current ->
-            current + files.map { file ->
+            current + files.filter { file -> current.none { it.id == file.id } }.map { file ->
                 UploadItem(
                     id = file.id,
                     displayName = file.displayName,
@@ -86,14 +93,21 @@ class GrowthUploadCoordinator(
         val photoDate: String,
         val note: String,
         val photo: PendingPhoto,
-    )
+    ) {
+        var originalPath: String? = null
+        var originalUploaded = false
+        var thumbnailUploaded = false
+    }
 
     private val pending = mutableMapOf<String, PendingWork>()
 
     private var cancelled = false
+    private var activeRun: Job? = null
+    private val runLock = Mutex()
 
     fun cancel() {
         cancelled = true
+        activeRun?.cancel()
     }
 
     fun clearCompleted() {
@@ -104,17 +118,28 @@ class GrowthUploadCoordinator(
         _items.update { current -> current.map { if (it.id == id) mutate(it) else it } }
     }
 
-    suspend fun run() = coroutineScope {
-        val queue = _items.value.filter { it.state == UploadState.QUEUED || it.state == UploadState.FAILED }
-        val semaphore = Semaphore(maxConcurrency)
-        queue.map { item ->
-            async {
-                semaphore.withPermit {
-                    if (cancelled) transition(item.id) { it.copy(state = UploadState.CANCELLED) }
-                    else uploadOne(item.id)
+    suspend fun run(resumeCancelled: Boolean = false) = coroutineScope {
+        if (!runLock.tryLock()) return@coroutineScope
+        activeRun = currentCoroutineContext()[Job]
+        if (resumeCancelled) cancelled = false
+        try {
+            val queue = _items.value.filter { it.state == UploadState.QUEUED || it.state == UploadState.FAILED || (resumeCancelled && it.state == UploadState.CANCELLED) }
+            val semaphore = Semaphore(maxConcurrency.coerceAtLeast(1))
+            queue.map { item ->
+                async {
+                    semaphore.withPermit {
+                        if (cancelled) transition(item.id) { it.copy(state = UploadState.CANCELLED) }
+                        else uploadOne(item.id)
+                    }
                 }
+            }.awaitAll()
+        } finally {
+            if (cancelled || !currentCoroutineContext()[Job]!!.isActive) {
+                _items.update { current -> current.map { if (it.state !in listOf(UploadState.COMPLETE, UploadState.FAILED)) it.copy(state = UploadState.CANCELLED) else it } }
             }
-        }.awaitAll()
+            activeRun = null
+            runLock.unlock()
+        }
     }
 
     private suspend fun uploadOne(id: String) {
@@ -123,6 +148,7 @@ class GrowthUploadCoordinator(
             return
         }
         var lastError: Throwable? = null
+        var prepared: PreparedPhoto? = null
         for (attempt in 1..maxAttempts) {
             if (cancelled) {
                 transition(id) { it.copy(state = UploadState.CANCELLED) }
@@ -130,29 +156,35 @@ class GrowthUploadCoordinator(
             }
             transition(id) { it.copy(state = if (attempt == 1) UploadState.PREPARING else UploadState.UPLOADING, attempts = attempt, error = null) }
             try {
-                val prepared = withContext(Dispatchers.Default) { work.photo.prepare() }
-                val originalPath = transport.originalPath(work.plantId, work.photo.displayName)
-
-                // Duplicate-safe: an existing storage path is a completed item.
-                val existingId = transport.findExisting(originalPath)
-                if (existingId != null) {
-                    transition(id) { it.copy(state = UploadState.COMPLETE) }
-                    pending.remove(id)
-                    return
+                withTimeout(60_000) {
+                    val originalPath = work.originalPath ?: transport.originalPath(work.plantId, work.photo.displayName).also { work.originalPath = it }
+                    // Probe before decoding: a lost metadata response does not reupload.
+                    val existingId = transport.findExisting(originalPath)
+                    if (existingId == null) {
+                        if (!work.originalUploaded || !work.thumbnailUploaded) {
+                            val bytes = prepared ?: withContext(Dispatchers.Default) { work.photo.prepare() }.also { prepared = it }
+                            transition(id) { it.copy(state = UploadState.UPLOADING) }
+                            if (!work.originalUploaded) {
+                                transport.uploadOriginal(originalPath, bytes.originalBytes, "image/jpeg")
+                                work.originalUploaded = true
+                            }
+                            if (!work.thumbnailUploaded) {
+                                transport.uploadThumbnail(transport.thumbnailPath(originalPath), bytes.thumbnailBytes)
+                                work.thumbnailUploaded = true
+                            }
+                        }
+                        transition(id) { it.copy(state = UploadState.CONFIRMING) }
+                        transport.insertMetadata(work.plantId, originalPath, transport.thumbnailPath(originalPath), work.photoDate, work.note)
+                    }
                 }
-
-                transition(id) { it.copy(state = UploadState.UPLOADING) }
-                transport.uploadOriginal(originalPath, prepared.originalBytes, "image/jpeg")
-
-                val thumbPath = transport.thumbnailPath(originalPath)
-                transport.uploadThumbnail(thumbPath, prepared.thumbnailBytes)
-
-                transition(id) { it.copy(state = UploadState.CONFIRMING) }
-                transport.insertMetadata(work.plantId, originalPath, thumbPath, work.photoDate, work.note)
 
                 transition(id) { it.copy(state = UploadState.COMPLETE) }
                 pending.remove(id)
                 return
+            } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                lastError = java.io.IOException("Photo upload timed out. Retry safely.", timeout)
+                if (attempt >= maxAttempts) break
+                delay(retryDelaysMs.getOrElse(attempt - 1) { 1600L })
             } catch (cancellation: CancellationException) {
                 transition(id) { it.copy(state = UploadState.CANCELLED) }
                 throw cancellation
