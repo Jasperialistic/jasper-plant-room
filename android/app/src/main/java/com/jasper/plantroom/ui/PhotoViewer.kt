@@ -58,6 +58,7 @@ fun PhotoViewer(slides: List<PhotoSlide>, startIndex: Int, title: String = "", o
     ) {
         androidx.activity.compose.BackHandler(onBack = onDismiss)
         val pagerState = rememberPagerState(initialPage = startIndex.coerceIn(0, slides.lastIndex)) { slides.size }
+        var actionUrl by remember { mutableStateOf<String?>(null) }
 
         Box(
             Modifier
@@ -68,7 +69,12 @@ fun PhotoViewer(slides: List<PhotoSlide>, startIndex: Int, title: String = "", o
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
-                ZoomableImage(slides[page].url)
+                ZoomableImage(slides[page].url) { actionUrl = slides[page].url }
+            }
+
+            // long-press menu: Copy / Save / Share (original bytes, Supabase untouched)
+            actionUrl?.let { url ->
+                ImageActionSheet(url = url, onDismiss = { actionUrl = null })
             }
 
             // top chrome: counter + close
@@ -118,7 +124,7 @@ fun PhotoViewer(slides: List<PhotoSlide>, startIndex: Int, title: String = "", o
 }
 
 @Composable
-private fun ZoomableImage(url: String) {
+private fun ZoomableImage(url: String, onImageLongPress: () -> Unit = {}) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
@@ -133,7 +139,8 @@ private fun ZoomableImage(url: String) {
                     onDoubleTap = {
                         scale = if (scale > 1f) 1f else 2.5f
                         if (scale <= 1f) { offsetX = 0f; offsetY = 0f }
-                    }
+                    },
+                    onLongPress = { onImageLongPress() },
                 )
             }
             .pointerInput(url, scale) {
